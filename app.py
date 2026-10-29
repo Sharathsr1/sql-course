@@ -526,6 +526,14 @@ FROM employees;</code></pre>
     },
 ]
 
+# ── Google Search Console ownership verification ──────────────────────────────
+@app.route("/googlec927be5152afab4b.html")
+def google_verify():
+    return Response(
+        "google-site-verification: googlec927be5152afab4b.html",
+        mimetype="text/html"
+    )
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
