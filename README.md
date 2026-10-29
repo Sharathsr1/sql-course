@@ -1,7 +1,8 @@
-# 🗄️ SQL Course — Learn SQL Simply
+# 🍽️ SQL Hunger — Feed Your Data Hunger
 
 An interactive SQL course website built with Python & Flask.  
 Write real SQL queries in your browser, see live results, and complete challenges.
+Created by **Sharath Kumar S R**.
 
 ## Features
 

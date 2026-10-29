@@ -3,6 +3,7 @@ import sqlite3
 import os
 import json
 from datetime import datetime
+from interview_data import INTERVIEW_QA
 
 app = Flask(__name__)
 app.secret_key = "sql_course_secret_2024"
