@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ lesson.title }}{% endblock %}
+{% block meta_desc %}Learn {{ lesson.title }} in SQL with live examples and a hands-on challenge. Free interactive SQL course by Sharath Kumar S R.{% endblock %}
+{% block og_title %}{{ lesson.title }} — SQL Course by Sharath Kumar S R{% endblock %}
+{% block og_desc %}Lesson {{ lesson.id }}: {{ lesson.title }}. Run real SQL queries in your browser and complete a challenge. Free & interactive.{% endblock %}
+{% block tw_title %}{{ lesson.title }} — SQL Course{% endblock %}
+{% block tw_desc %}Lesson {{ lesson.id }}: {{ lesson.title }}. Live SQL editor, examples & challenge included.{% endblock %}
+{% block ld_name %}{{ lesson.title }} — SQL Lesson {{ lesson.id }}{% endblock %}
 
 {% block content %}
 <div class="lesson-layout">

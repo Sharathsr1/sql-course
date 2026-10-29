@@ -3,7 +3,45 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}SQL Course{% endblock %} — Learn SQL Simply</title>
+
+  <!-- ── Primary SEO ── -->
+  <title>{% block title %}SQL Course{% endblock %} — Learn SQL Simply | By Sharath Kumar S R</title>
+  <meta name="description"  content="{% block meta_desc %}Free interactive SQL course with live query editor. Learn SELECT, WHERE, JOINs, subqueries and more — step by step, simply explained. Created by Sharath Kumar S R.{% endblock %}"/>
+  <meta name="keywords"     content="SQL course, learn SQL, SQL tutorial, SQL for beginners, SQL JOINs, SQL subqueries, interactive SQL, free SQL course, Sharath Kumar S R"/>
+  <meta name="author"       content="Sharath Kumar S R"/>
+  <meta name="robots"       content="index, follow"/>
+  <link rel="canonical"     href="{{ request.url }}"/>
+
+  <!-- ── Open Graph (Facebook / LinkedIn previews) ── -->
+  <meta property="og:type"        content="website"/>
+  <meta property="og:url"         content="{{ request.url }}"/>
+  <meta property="og:title"       content="{% block og_title %}Learn SQL Simply — Free Interactive Course{% endblock %}"/>
+  <meta property="og:description" content="{% block og_desc %}Write real SQL in your browser. 10 lessons, 50+ live examples, challenges with hints. From SELECT to Window Functions.{% endblock %}"/>
+  <meta property="og:site_name"   content="SQL Course by Sharath Kumar S R"/>
+
+  <!-- ── Twitter Card ── -->
+  <meta name="twitter:card"        content="summary"/>
+  <meta name="twitter:title"       content="{% block tw_title %}Learn SQL Simply — Free Interactive Course{% endblock %}"/>
+  <meta name="twitter:description" content="{% block tw_desc %}Free interactive SQL course. Write real queries, see live results. 10 lessons from beginner to advanced.{% endblock %}"/>
+
+  <!-- ── Structured Data (Google rich results) ── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    "name": "{% block ld_name %}Learn SQL Simply{% endblock %}",
+    "description": "Free interactive SQL course covering SELECT, WHERE, JOINs, subqueries, window functions and more.",
+    "provider": {
+      "@type": "Person",
+      "name": "Sharath Kumar S R"
+    },
+    "educationalLevel": "Beginner to Advanced",
+    "inLanguage": "en",
+    "isAccessibleForFree": true,
+    "url": "{{ request.url }}"
+  }
+  </script>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>

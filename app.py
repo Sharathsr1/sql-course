@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, Response
 import sqlite3
 import os
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "sql_course_secret_2024"
@@ -594,3 +595,38 @@ def reset_sandbox():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+# ── SEO: sitemap.xml ──────────────────────────────────────────────────────────
+@app.route("/sitemap.xml")
+def sitemap():
+    base = request.host_url.rstrip("/")
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    urls = [{"loc": base, "priority": "1.0", "changefreq": "weekly"}]
+    for l in LESSONS:
+        urls.append({
+            "loc": f"{base}/lesson/{l['slug']}",
+            "priority": "0.9",
+            "changefreq": "monthly"
+        })
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for u in urls:
+        xml.append(f"""  <url>
+    <loc>{u['loc']}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>{u['changefreq']}</changefreq>
+    <priority>{u['priority']}</priority>
+  </url>""")
+    xml.append("</urlset>")
+    return Response("\n".join(xml), mimetype="application/xml")
+
+# ── SEO: robots.txt ───────────────────────────────────────────────────────────
+@app.route("/robots.txt")
+def robots():
+    base = request.host_url.rstrip("/")
+    content = f"""User-agent: *
+Allow: /
+
+Sitemap: {base}/sitemap.xml
+"""
+    return Response(content, mimetype="text/plain")
