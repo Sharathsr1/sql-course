@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="lesson-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Course Lessons</div>
+    {% for l in lessons %}
+    <a href="/lesson/{{ l.slug }}"
+       class="sidebar-item {% if l.slug == lesson.slug %}active{% endif %}
+              level-{{ l.level|lower }}">
+      <span>{{ l.icon }}</span>
+      <span class="sidebar-item-text">{{ l.title }}</span>
+    </a>
+    {% endfor %}
+    <div class="sidebar-divider"></div>
+    <button class="btn-reset" onclick="resetSandbox()">🔄 Reset Database</button>
+  </aside>
+
+  <!-- Main content -->
+  <main class="lesson-main">
+
+    <!-- Header -->
+    <div class="lesson-header">
+      <div class="lesson-meta">
+        <span class="badge badge-{{ lesson.level|lower }}">{{ lesson.level }}</span>
+        <span class="lesson-num-label">Lesson {{ lesson.id }} of {{ lessons|length }}</span>
+      </div>
+      <h1 class="lesson-h1">{{ lesson.icon }} {{ lesson.title }}</h1>
+    </div>
+
+    <!-- Theory -->
+    <section class="theory-section">
+      {{ lesson.theory|safe }}
+    </section>
+
+    <!-- Examples -->
+    <section class="examples-section">
+      <h2 class="section-h2">💡 Live Examples</h2>
+      <p class="section-desc">Click any example to load it, then hit <strong>Run</strong> to see the results.</p>
+
+      <div class="examples-list">
+        {% for ex in lesson.examples %}
+        <div class="example-card" onclick="loadExample({{ loop.index0 }})">
+          <div class="example-header">
+            <span class="example-num">{{ loop.index }}</span>
+            <span class="example-title">{{ ex.title }}</span>
+            <span class="example-run-hint">▶ Try it</span>
+          </div>
+          <pre class="example-sql">{{ ex.sql }}</pre>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- SQL Editor -->
+    <section class="editor-section" id="editor-section">
+      <h2 class="section-h2">⌨️ SQL Editor</h2>
+      <div class="editor-wrapper">
+        <textarea id="sql-editor" spellcheck="false"
+          placeholder="-- Type or click an example above...
+SELECT * FROM employees LIMIT 5;">SELECT * FROM employees LIMIT 5;</textarea>
+        <div class="editor-toolbar">
+          <button class="btn-run" onclick="runSQL()">▶ Run Query</button>
+          <button class="btn-clear" onclick="clearEditor()">✕ Clear</button>
+          <span class="editor-hint">Ctrl+Enter to run</span>
+        </div>
+      </div>
+      <div id="result-area"></div>
+    </section>
+
+    <!-- Challenge -->
+    <section class="challenge-section">
+      <h2 class="section-h2">🎯 Challenge</h2>
+      <div class="challenge-box">
+        <p class="challenge-q">{{ lesson.challenge.question|safe }}</p>
+        <details class="hint-details">
+          <summary>💡 Show Hint</summary>
+          <p class="hint-text">{{ lesson.challenge.hint }}</p>
+        </details>
+        <div class="challenge-editor-wrap">
+          <textarea id="challenge-editor" spellcheck="false"
+            placeholder="-- Write your answer here..."></textarea>
+          <div class="editor-toolbar">
+            <button class="btn-run" onclick="runChallenge()">▶ Run Answer</button>
+            <button class="btn-solution" onclick="showSolution()">👁 Show Solution</button>
+          </div>
+        </div>
+        <div id="challenge-result"></div>
+        <div id="solution-box" class="solution-box" style="display:none;">
+          <strong>✅ Solution:</strong>
+          <pre>{{ lesson.challenge.answer }}</pre>
+          <button class="btn-small" onclick="loadSolution()">Load in Editor</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="lesson-nav">
+      {% if prev_lesson %}
+      <a href="/lesson/{{ prev_lesson.slug }}" class="nav-btn nav-prev">
+        ← {{ prev_lesson.title }}
+      </a>
+      {% else %}
+      <span></span>
+      {% endif %}
+
+      {% if next_lesson %}
+      <a href="/lesson/{{ next_lesson.slug }}" class="nav-btn nav-next">
+        {{ next_lesson.title }} →
+      </a>
+      {% else %}
+      <a href="/" class="nav-btn nav-next">🏠 Back to Home</a>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const EXAMPLES = {{ lesson.examples | tojson }};
+const SOLUTION = {{ lesson.challenge.answer | tojson }};
+
+function loadExample(idx) {
+  const sql = EXAMPLES[idx].sql;
+  document.getElementById('sql-editor').value = sql;
+  document.getElementById('editor-section').scrollIntoView({ behavior: 'smooth' });
+  // Highlight clicked card
+  document.querySelectorAll('.example-card').forEach((c, i) => {
+    c.classList.toggle('active', i === idx);
+  });
+  runSQLFromTextarea('sql-editor', 'result-area');
+}
+
+function runSQL() {
+  runSQLFromTextarea('sql-editor', 'result-area');
+}
+
+function runChallenge() {
+  runSQLFromTextarea('challenge-editor', 'challenge-result');
+}
+
+function clearEditor() {
+  document.getElementById('sql-editor').value = '';
+  document.getElementById('result-area').innerHTML = '';
+}
+
+function showSolution() {
+  const box = document.getElementById('solution-box');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+function loadSolution() {
+  document.getElementById('challenge-editor').value = SOLUTION;
+  runSQLFromTextarea('challenge-editor', 'challenge-result');
+}
+
+function runSQLFromTextarea(editorId, resultId) {
+  const sql = document.getElementById(editorId).value.trim();
+  if (!sql) return;
+  const resultArea = document.getElementById(resultId);
+  resultArea.innerHTML = '<div class="result-loading">⏳ Running...</div>';
+
+  fetch('/run_sql', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sql })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      resultArea.innerHTML = `<div class="result-error">❌ Error: ${escHtml(data.error)}</div>`;
+      return;
+    }
+    let html = '';
+    data.results.forEach(res => {
+      if (res.type === 'modify') {
+        html += `<div class="result-success">${res.message}</div>`;
+      } else {
+        html += buildTable(res);
+      }
+    });
+    resultArea.innerHTML = html;
+  })
+  .catch(e => {
+    resultArea.innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
+  });
+}
+
+function buildTable(res) {
+  const { columns, rows, rowcount } = res;
+  let h = `<div class="result-meta">✅ ${rowcount} row${rowcount !== 1 ? 's' : ''} returned</div>`;
+  if (rows.length === 0) {
+    return h + '<div class="result-empty">No rows returned.</div>';
+  }
+  h += '<div class="table-scroll"><table class="result-table"><thead><tr>';
+  columns.forEach(c => h += `<th>${escHtml(c)}</th>`);
+  h += '</tr></thead><tbody>';
+  rows.forEach(row => {
+    h += '<tr>';
+    row.forEach(cell => {
+      const val = cell === null ? '<span class="null-val">NULL</span>' : escHtml(String(cell));
+      h += `<td>${val}</td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function resetSandbox() {
+  fetch('/reset_sandbox', { method: 'POST' })
+    .then(() => showToast('🔄 Database reset to original data!'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Ctrl+Enter to run
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    const active = document.activeElement;
+    if (active.id === 'sql-editor') runSQL();
+    else if (active.id === 'challenge-editor') runChallenge();
+  }
+});
+</script>
+{% endblock %}

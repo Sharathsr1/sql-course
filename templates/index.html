@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="home-hero">
+  <div class="hero-badge">100% Free · No Sign-up · Runs in Browser</div>
+  <h1 class="hero-title">Learn SQL from Scratch<br/><span class="gradient-text">Simply & Interactively</span></h1>
+  <p class="hero-sub">
+    Write real SQL queries in a live sandbox. No installation needed.
+    Go from zero to writing JOINs, subqueries, and window functions.
+  </p>
+  <a href="/lesson/intro" class="btn-primary btn-lg">Start Learning →</a>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <span class="stat-num">{{ lessons|length }}</span>
+    <span class="stat-label">Lessons</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num">50+</span>
+    <span class="stat-label">Live Examples</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num">10</span>
+    <span class="stat-label">Challenges</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-num">5</span>
+    <span class="stat-label">Sample Tables</span>
+  </div>
+</div>
+
+<section class="lessons-section">
+  <h2 class="section-title">Course Curriculum</h2>
+
+  <div class="level-group">
+    <div class="level-header beginner">🟢 Beginner</div>
+    <div class="lessons-grid">
+      {% for lesson in lessons if lesson.level == 'Beginner' %}
+      <a href="/lesson/{{ lesson.slug }}" class="lesson-card">
+        <span class="lesson-icon">{{ lesson.icon }}</span>
+        <div class="lesson-info">
+          <span class="lesson-num">Lesson {{ lesson.id }}</span>
+          <span class="lesson-title">{{ lesson.title }}</span>
+        </div>
+        <span class="lesson-arrow">→</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="level-group">
+    <div class="level-header intermediate">🟡 Intermediate</div>
+    <div class="lessons-grid">
+      {% for lesson in lessons if lesson.level == 'Intermediate' %}
+      <a href="/lesson/{{ lesson.slug }}" class="lesson-card">
+        <span class="lesson-icon">{{ lesson.icon }}</span>
+        <div class="lesson-info">
+          <span class="lesson-num">Lesson {{ lesson.id }}</span>
+          <span class="lesson-title">{{ lesson.title }}</span>
+        </div>
+        <span class="lesson-arrow">→</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="level-group">
+    <div class="level-header advanced">🔴 Advanced</div>
+    <div class="lessons-grid">
+      {% for lesson in lessons if lesson.level == 'Advanced' %}
+      <a href="/lesson/{{ lesson.slug }}" class="lesson-card">
+        <span class="lesson-icon">{{ lesson.icon }}</span>
+        <div class="lesson-info">
+          <span class="lesson-num">Lesson {{ lesson.id }}</span>
+          <span class="lesson-title">{{ lesson.title }}</span>
+        </div>
+        <span class="lesson-arrow">→</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="features-section">
+  <h2 class="section-title">Why this course?</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">⚡</span>
+      <h3>Live SQL Editor</h3>
+      <p>Write and run real queries right in your browser. Instant results, no setup.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🍕</span>
+      <h3>Simple Analogies</h3>
+      <p>Every concept explained with real-world examples before the technical stuff.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎯</span>
+      <h3>Challenges</h3>
+      <p>Each lesson ends with a challenge to test what you learned.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔄</span>
+      <h3>Safe Sandbox</h3>
+      <p>Break stuff freely — reset your database any time with one click.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
