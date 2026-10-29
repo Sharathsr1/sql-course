@@ -53,8 +53,9 @@
       <span class="brand-text">SQL<strong>Hunger</strong></span>
     </a>
     <div class="nav-links">
-      <a href="/">Home</a>
-      <a href="/lesson/what-is-sql">Start Learning</a>
+      <a href="/" class="{{ 'nav-active' if request.path == '/' }}">Home</a>
+      <a href="/lesson/what-is-sql" class="{{ 'nav-active' if request.path.startswith('/lesson') }}">Start Learning</a>
+      <a href="/interview" class="{{ 'nav-active' if request.path.startswith('/interview') }}">🎯 Interview Prep</a>
     </div>
   </nav>
 

@@ -2085,6 +2085,65 @@ for section in CURRICULUM:
 
 SLUG_MAP = {l["slug"]: l for l in ALL_LESSONS}
 
+# ── Interview Prep: map level names to display names ─────────────────────────
+LEVEL_DISPLAY = {
+    "Fresher": "Basic",
+    "Junior":  "Intermediate",
+    "Mid":     "Advanced",
+    "Senior":  "Professional",
+}
+
+LEVEL_ORDER = {"Basic": 0, "Intermediate": 1, "Advanced": 2, "Professional": 3}
+
+# Detect "difference" questions by keywords in the question text
+_DIFF_KEYWORDS = ("difference between", "vs ", " vs.", "compared to", "compare ",
+                  "distinguish", "what is the diff", "when to use")
+
+def _is_diff(q_text):
+    ql = q_text.lower()
+    return any(kw in ql for kw in _DIFF_KEYWORDS)
+
+def build_interview_groups():
+    """
+    Build structured groups for the interview page.
+    Groups mirror CURRICULUM sections; topics are individual lesson slugs.
+    Level names are normalised to Basic/Intermediate/Advanced/Professional.
+    """
+    groups = []
+    for section in CURRICULUM:
+        topics = []
+        for lesson in section["lessons"]:
+            slug = lesson["slug"]
+            raw_qs = INTERVIEW_QA.get(slug, [])
+            if not raw_qs:
+                continue
+            questions = []
+            for item in raw_qs:
+                lv = LEVEL_DISPLAY.get(item["level"], item["level"])
+                questions.append({
+                    "level":   lv,
+                    "q":       item["q"],
+                    "a":       item["a"],
+                    "is_diff": _is_diff(item["q"]),
+                })
+            # sort by level
+            questions.sort(key=lambda x: LEVEL_ORDER.get(x["level"], 99))
+            topics.append({
+                "slug":      slug,
+                "title":     lesson["title"],
+                "questions": questions,
+            })
+        if topics:
+            groups.append({
+                "name":   section["title"],
+                "icon":   section["icon"],
+                "desc":   f"{sum(len(t['questions']) for t in topics)} questions across {len(topics)} topic(s)",
+                "topics": topics,
+            })
+    return groups
+
+INTERVIEW_GROUPS = build_interview_groups()
+
 def get_sandbox_db(uid):
     path = os.path.join(SANDBOX_DIR, f"user_{uid}.db")
     conn = sqlite3.connect(path)
@@ -2110,6 +2169,10 @@ def google_verify():
 def index():
     return render_template("index.html", curriculum=CURRICULUM,
                            total=len(ALL_LESSONS))
+
+@app.route("/interview")
+def interview():
+    return render_template("interview.html", groups=INTERVIEW_GROUPS)
 
 @app.route("/lesson/<slug>")
 def lesson(slug):

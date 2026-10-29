@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}SQL Interview Prep{% endblock %}
+{% block meta_desc %}SQL interview questions and answers for all levels — Basic, Intermediate, Advanced, and Professional. Covers SELECT, JOINs, subqueries, window functions, indexing, transactions and more.{% endblock %}
+{% block og_title %}SQL Interview Prep — SQL Hunger{% endblock %}
+{% block og_desc %}300+ SQL interview Q&A grouped by topic and difficulty: Basic, Intermediate, Advanced, Professional. MySQL & Oracle syntax included.{% endblock %}
+
+{% block content %}
+<div class="iv-page">
+
+  <!-- Hero -->
+  <div class="iv-hero">
+    <div class="hero-badge">300+ Questions · MySQL & Oracle · All Levels</div>
+    <h1 class="iv-title">🎯 SQL Interview Preparation</h1>
+    <p class="iv-sub">Curated Q&amp;A grouped by topic and difficulty — from first-job basics to senior engineer deep-dives.</p>
+  </div>
+
+  <!-- Stats row -->
+  <div class="iv-stats">
+    {% set total_q = namespace(n=0) %}
+    {% for grp in groups %}
+      {% for topic in grp.topics %}
+        {% set total_q.n = total_q.n + topic.questions|length %}
+      {% endfor %}
+    {% endfor %}
+    <div class="iv-stat"><span class="iv-stat-num">{{ total_q.n }}</span><span class="iv-stat-label">Questions</span></div>
+    <div class="iv-stat"><span class="iv-stat-num">{{ groups|length }}</span><span class="iv-stat-label">Groups</span></div>
+    <div class="iv-stat"><span class="iv-stat-num">4</span><span class="iv-stat-label">Levels</span></div>
+    <div class="iv-stat"><span class="iv-stat-num">2</span><span class="iv-stat-label">Dialects</span></div>
+  </div>
+
+  <!-- Level filter -->
+  <div class="iv-filter-bar">
+    <span class="iv-filter-label">Filter by level:</span>
+    <div class="iv-level-tabs">
+      <button class="iv-tab active" data-level="all" onclick="filterLevel('all', this)">All Levels</button>
+      <button class="iv-tab basic"    data-level="Basic"        onclick="filterLevel('Basic', this)">🟢 Basic</button>
+      <button class="iv-tab inter"   data-level="Intermediate"  onclick="filterLevel('Intermediate', this)">🟡 Intermediate</button>
+      <button class="iv-tab adv"     data-level="Advanced"      onclick="filterLevel('Advanced', this)">🟠 Advanced</button>
+      <button class="iv-tab pro"     data-level="Professional"  onclick="filterLevel('Professional', this)">🔴 Professional</button>
+    </div>
+  </div>
+
+  <!-- Topic groups nav -->
+  <div class="iv-group-nav">
+    {% for grp in groups %}
+    <a href="#grp-{{ loop.index0 }}" class="iv-group-pill">{{ grp.icon }} {{ grp.name }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Groups + topics -->
+  {% for grp in groups %}
+  <section class="iv-group" id="grp-{{ loop.index0 }}">
+    <div class="iv-group-header">
+      <span class="iv-group-icon">{{ grp.icon }}</span>
+      <div>
+        <div class="iv-group-name">{{ grp.name }}</div>
+        <div class="iv-group-desc">{{ grp.desc }}</div>
+      </div>
+      {% set grp_total = namespace(n=0) %}
+      {% for t in grp.topics %}{% set grp_total.n = grp_total.n + t.questions|length %}{% endfor %}
+      <div class="iv-group-count">{{ grp_total.n }} questions</div>
+    </div>
+
+    {% for topic in grp.topics %}
+    <div class="iv-topic" id="topic-{{ topic.slug }}">
+      <div class="iv-topic-header" onclick="toggleTopic('{{ topic.slug }}')">
+        <div class="iv-topic-left">
+          <span class="iv-topic-title">{{ topic.title }}</span>
+          <div class="iv-topic-levels">
+            {% set levels = topic.questions | map(attribute='level') | unique | list %}
+            {% for lv in levels %}
+            <span class="iv-badge iv-badge-{{ lv | lower }}">{{ lv }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="iv-topic-right">
+          <span class="iv-q-count">{{ topic.questions|length }} Q</span>
+          <span class="iv-arrow" id="arr-{{ topic.slug }}">▾</span>
+        </div>
+      </div>
+
+      <div class="iv-topic-body" id="body-{{ topic.slug }}">
+        <!-- Level sub-tabs for this topic -->
+        <div class="iv-subtabs">
+          <button class="iv-subtab active" onclick="filterTopic('{{ topic.slug }}', 'all', this)">All</button>
+          {% for lv in levels %}
+          <button class="iv-subtab iv-subtab-{{ lv | lower }}"
+                  onclick="filterTopic('{{ topic.slug }}', '{{ lv }}', this)">{{ lv }}</button>
+          {% endfor %}
+        </div>
+
+        <!-- Differences quick-links (questions that are comparisons) -->
+        {% set diff_qs = topic.questions | selectattr('is_diff') | list %}
+        {% if diff_qs %}
+        <div class="iv-diff-bar">
+          <span class="iv-diff-label">⚡ Key Differences:</span>
+          {% for dq in diff_qs %}
+          <a href="#q-{{ topic.slug }}-{{ loop.index0 }}" class="iv-diff-link">{{ dq.q | truncate(55, True, '…') }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Questions -->
+        <div class="iv-questions" id="qs-{{ topic.slug }}">
+          {% for item in topic.questions %}
+          <div class="iv-card" data-level="{{ item.level }}" id="q-{{ topic.slug }}-{{ loop.index0 }}">
+            <div class="iv-card-header" onclick="toggleCard(this)">
+              <span class="iv-badge iv-badge-{{ item.level | lower }}">{{ item.level }}</span>
+              {% if item.is_diff %}<span class="iv-diff-badge">⚡ Difference</span>{% endif %}
+              <span class="iv-card-q">{{ item.q }}</span>
+              <span class="iv-card-arrow">▾</span>
+            </div>
+            <div class="iv-card-body">
+              <div class="iv-card-answer">{{ item.a | safe }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+</div>
+
+<div id="toast" class="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Card expand/collapse ──────────────────────────────────────────────────────
+function toggleCard(header) {
+  const card = header.closest('.iv-card');
+  card.classList.toggle('open');
+}
+
+// ── Topic section expand/collapse ─────────────────────────────────────────────
+function toggleTopic(slug) {
+  const body  = document.getElementById('body-' + slug);
+  const arrow = document.getElementById('arr-' + slug);
+  const collapsed = body.classList.toggle('collapsed');
+  arrow.textContent = collapsed ? '▸' : '▾';
+}
+
+// ── Global level filter ───────────────────────────────────────────────────────
+function filterLevel(level, btn) {
+  // Update active tab
+  document.querySelectorAll('.iv-level-tabs .iv-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelectorAll('.iv-card').forEach(card => {
+    if (level === 'all' || card.dataset.level === level) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  // Show/hide entire topics if no visible cards
+  document.querySelectorAll('.iv-topic').forEach(topic => {
+    const visible = [...topic.querySelectorAll('.iv-card')]
+      .some(c => c.style.display !== 'none');
+    topic.style.display = visible ? '' : 'none';
+  });
+
+  // Show/hide entire groups
+  document.querySelectorAll('.iv-group').forEach(grp => {
+    const visible = [...grp.querySelectorAll('.iv-topic')]
+      .some(t => t.style.display !== 'none');
+    grp.style.display = visible ? '' : 'none';
+  });
+}
+
+// ── Per-topic sub-filter ──────────────────────────────────────────────────────
+function filterTopic(slug, level, btn) {
+  btn.closest('.iv-subtabs').querySelectorAll('.iv-subtab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  const container = document.getElementById('qs-' + slug);
+  container.querySelectorAll('.iv-card').forEach(card => {
+    card.style.display = (level === 'all' || card.dataset.level === level) ? '' : 'none';
+  });
+}
+
+// ── Auto-expand first topic per group ────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // All topic bodies start open; collapse those that aren't the first in their group
+  document.querySelectorAll('.iv-group').forEach(grp => {
+    grp.querySelectorAll('.iv-topic').forEach((topic, i) => {
+      if (i > 0) {
+        const slug = topic.id.replace('topic-', '');
+        const body = document.getElementById('body-' + slug);
+        const arrow = document.getElementById('arr-' + slug);
+        body.classList.add('collapsed');
+        arrow.textContent = '▸';
+      }
+    });
+  });
+});
+
+// ── Smooth scroll for group nav pills ─────────────────────────────────────────
+document.querySelectorAll('.iv-group-pill').forEach(pill => {
+  pill.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(pill.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+</script>
+{% endblock %}
