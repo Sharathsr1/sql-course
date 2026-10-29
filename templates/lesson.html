@@ -1,26 +1,37 @@
 {% extends "base.html" %}
 {% block title %}{{ lesson.title }}{% endblock %}
 {% block meta_desc %}Learn {{ lesson.title }} in SQL with live examples and a hands-on challenge. Free interactive SQL course by Sharath Kumar S R.{% endblock %}
-{% block og_title %}{{ lesson.title }} — SQL Course by Sharath Kumar S R{% endblock %}
-{% block og_desc %}Lesson {{ lesson.id }}: {{ lesson.title }}. Run real SQL queries in your browser and complete a challenge. Free & interactive.{% endblock %}
-{% block tw_title %}{{ lesson.title }} — SQL Course{% endblock %}
-{% block tw_desc %}Lesson {{ lesson.id }}: {{ lesson.title }}. Live SQL editor, examples & challenge included.{% endblock %}
-{% block ld_name %}{{ lesson.title }} — SQL Lesson {{ lesson.id }}{% endblock %}
 
 {% block content %}
 <div class="lesson-layout">
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-title">Course Lessons</div>
-    {% for l in lessons %}
-    <a href="/lesson/{{ l.slug }}"
-       class="sidebar-item {% if l.slug == lesson.slug %}active{% endif %}
-              level-{{ l.level|lower }}">
-      <span>{{ l.icon }}</span>
-      <span class="sidebar-item-text">{{ l.title }}</span>
-    </a>
+  <!-- Collapsible Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-title">📚 Course Topics</div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+    </div>
+
+    {% for section in curriculum %}
+    <div class="sidebar-section">
+      <div class="sidebar-section-header"
+           onclick="toggleSection('sec-{{ section.id }}')"
+           id="hdr-{{ section.id }}">
+        <span>{{ section.icon }} {{ section.title }}</span>
+        <span class="section-arrow" id="arr-{{ section.id }}">▾</span>
+      </div>
+      <div class="sidebar-section-lessons" id="sec-{{ section.id }}">
+        {% for l in section.lessons %}
+        <a href="/lesson/{{ l.slug }}"
+           class="sidebar-item {% if l.slug == lesson.slug %}active{% endif %}">
+          <span class="si-dot">▸</span>
+          <span class="si-text">{{ l.title }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
     {% endfor %}
+
     <div class="sidebar-divider"></div>
     <button class="btn-reset" onclick="resetSandbox()">🔄 Reset Database</button>
   </aside>
@@ -28,13 +39,18 @@
   <!-- Main content -->
   <main class="lesson-main">
 
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="/">Home</a>
+      <span>›</span>
+      <span>{{ lesson.section_icon }} {{ lesson.section_title }}</span>
+      <span>›</span>
+      <span>{{ lesson.title }}</span>
+    </div>
+
     <!-- Header -->
     <div class="lesson-header">
-      <div class="lesson-meta">
-        <span class="badge badge-{{ lesson.level|lower }}">{{ lesson.level }}</span>
-        <span class="lesson-num-label">Lesson {{ lesson.id }} of {{ lessons|length }}</span>
-      </div>
-      <h1 class="lesson-h1">{{ lesson.icon }} {{ lesson.title }}</h1>
+      <h1 class="lesson-h1">{{ lesson.title }}</h1>
     </div>
 
     <!-- Theory -->
@@ -45,8 +61,7 @@
     <!-- Examples -->
     <section class="examples-section">
       <h2 class="section-h2">💡 Live Examples</h2>
-      <p class="section-desc">Click any example to load it, then hit <strong>Run</strong> to see the results.</p>
-
+      <p class="section-desc">Click any example to load it into the editor and run it instantly.</p>
       <div class="examples-list">
         {% for ex in lesson.examples %}
         <div class="example-card" onclick="loadExample({{ loop.index0 }})">
@@ -61,15 +76,15 @@
       </div>
     </section>
 
-    <!-- SQL Editor -->
+    <!-- Editor -->
     <section class="editor-section" id="editor-section">
       <h2 class="section-h2">⌨️ SQL Editor</h2>
       <div class="editor-wrapper">
         <textarea id="sql-editor" spellcheck="false"
-          placeholder="-- Type or click an example above...
+          placeholder="-- Type your SQL here or click an example above...
 SELECT * FROM employees LIMIT 5;">SELECT * FROM employees LIMIT 5;</textarea>
         <div class="editor-toolbar">
-          <button class="btn-run" onclick="runSQL()">▶ Run Query</button>
+          <button class="btn-run" onclick="runSQL()">▶ Run</button>
           <button class="btn-clear" onclick="clearEditor()">✕ Clear</button>
           <span class="editor-hint">Ctrl+Enter to run</span>
         </div>
@@ -109,9 +124,7 @@ SELECT * FROM employees LIMIT 5;">SELECT * FROM employees LIMIT 5;</textarea>
       <a href="/lesson/{{ prev_lesson.slug }}" class="nav-btn nav-prev">
         ← {{ prev_lesson.title }}
       </a>
-      {% else %}
-      <span></span>
-      {% endif %}
+      {% else %}<span></span>{% endif %}
 
       {% if next_lesson %}
       <a href="/lesson/{{ next_lesson.slug }}" class="nav-btn nav-next">
@@ -125,7 +138,6 @@ SELECT * FROM employees LIMIT 5;">SELECT * FROM employees LIMIT 5;</textarea>
   </main>
 </div>
 
-<!-- Toast -->
 <div id="toast" class="toast"></div>
 {% endblock %}
 
@@ -133,36 +145,58 @@ SELECT * FROM employees LIMIT 5;">SELECT * FROM employees LIMIT 5;</textarea>
 <script>
 const EXAMPLES = {{ lesson.examples | tojson }};
 const SOLUTION = {{ lesson.challenge.answer | tojson }};
+const ACTIVE_SECTION = "sec-{{ lesson.section_id }}";
+
+// Auto-expand active section on load
+document.addEventListener('DOMContentLoaded', () => {
+  // Collapse all first
+  document.querySelectorAll('.sidebar-section-lessons').forEach(el => {
+    el.classList.add('collapsed');
+  });
+  document.querySelectorAll('.section-arrow').forEach(el => {
+    el.textContent = '▸';
+  });
+  // Expand active
+  const active = document.getElementById(ACTIVE_SECTION);
+  const arrow  = document.getElementById('arr-{{ lesson.section_id }}');
+  if (active)  active.classList.remove('collapsed');
+  if (arrow)   arrow.textContent = '▾';
+  // Scroll active item into view
+  const activeItem = document.querySelector('.sidebar-item.active');
+  if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
+});
+
+function toggleSection(id) {
+  const el    = document.getElementById(id);
+  const secId = id.replace('sec-', '');
+  const arrow = document.getElementById('arr-' + secId);
+  const collapsed = el.classList.toggle('collapsed');
+  arrow.textContent = collapsed ? '▸' : '▾';
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('hidden');
+}
 
 function loadExample(idx) {
-  const sql = EXAMPLES[idx].sql;
-  document.getElementById('sql-editor').value = sql;
+  document.getElementById('sql-editor').value = EXAMPLES[idx].sql;
   document.getElementById('editor-section').scrollIntoView({ behavior: 'smooth' });
-  // Highlight clicked card
-  document.querySelectorAll('.example-card').forEach((c, i) => {
+  document.querySelectorAll('.example-card').forEach((c,i) => {
     c.classList.toggle('active', i === idx);
   });
   runSQLFromTextarea('sql-editor', 'result-area');
 }
 
-function runSQL() {
-  runSQLFromTextarea('sql-editor', 'result-area');
-}
-
-function runChallenge() {
-  runSQLFromTextarea('challenge-editor', 'challenge-result');
-}
-
-function clearEditor() {
+function runSQL()       { runSQLFromTextarea('sql-editor', 'result-area'); }
+function runChallenge() { runSQLFromTextarea('challenge-editor', 'challenge-result'); }
+function clearEditor()  {
   document.getElementById('sql-editor').value = '';
   document.getElementById('result-area').innerHTML = '';
 }
-
 function showSolution() {
   const box = document.getElementById('solution-box');
   box.style.display = box.style.display === 'none' ? 'block' : 'none';
 }
-
 function loadSolution() {
   document.getElementById('challenge-editor').value = SOLUTION;
   runSQLFromTextarea('challenge-editor', 'challenge-result');
@@ -173,7 +207,6 @@ function runSQLFromTextarea(editorId, resultId) {
   if (!sql) return;
   const resultArea = document.getElementById(resultId);
   resultArea.innerHTML = '<div class="result-loading">⏳ Running...</div>';
-
   fetch('/run_sql', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -182,43 +215,36 @@ function runSQLFromTextarea(editorId, resultId) {
   .then(r => r.json())
   .then(data => {
     if (data.error) {
-      resultArea.innerHTML = `<div class="result-error">❌ Error: ${escHtml(data.error)}</div>`;
+      resultArea.innerHTML = `<div class="result-error">❌ ${escHtml(data.error)}</div>`;
       return;
     }
     let html = '';
     data.results.forEach(res => {
-      if (res.type === 'modify') {
-        html += `<div class="result-success">${res.message}</div>`;
-      } else {
-        html += buildTable(res);
-      }
+      html += res.type === 'modify'
+        ? `<div class="result-success">${res.message}</div>`
+        : buildTable(res);
     });
     resultArea.innerHTML = html;
   })
-  .catch(e => {
-    resultArea.innerHTML = `<div class="result-error">❌ ${e.message}</div>`;
-  });
+  .catch(e => { resultArea.innerHTML = `<div class="result-error">❌ ${e.message}</div>`; });
 }
 
 function buildTable(res) {
   const { columns, rows, rowcount } = res;
   let h = `<div class="result-meta">✅ ${rowcount} row${rowcount !== 1 ? 's' : ''} returned</div>`;
-  if (rows.length === 0) {
-    return h + '<div class="result-empty">No rows returned.</div>';
-  }
+  if (!rows.length) return h + '<div class="result-empty">No rows returned.</div>';
   h += '<div class="table-scroll"><table class="result-table"><thead><tr>';
   columns.forEach(c => h += `<th>${escHtml(c)}</th>`);
   h += '</tr></thead><tbody>';
   rows.forEach(row => {
     h += '<tr>';
     row.forEach(cell => {
-      const val = cell === null ? '<span class="null-val">NULL</span>' : escHtml(String(cell));
-      h += `<td>${val}</td>`;
+      const v = cell === null ? '<span class="null-val">NULL</span>' : escHtml(String(cell));
+      h += `<td>${v}</td>`;
     });
     h += '</tr>';
   });
-  h += '</tbody></table></div>';
-  return h;
+  return h + '</tbody></table></div>';
 }
 
 function escHtml(s) {
@@ -237,12 +263,10 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// Ctrl+Enter to run
 document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'Enter') {
-    const active = document.activeElement;
-    if (active.id === 'sql-editor') runSQL();
-    else if (active.id === 'challenge-editor') runChallenge();
+    if (document.activeElement.id === 'sql-editor') runSQL();
+    else if (document.activeElement.id === 'challenge-editor') runChallenge();
   }
 });
 </script>
