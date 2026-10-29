@@ -1247,6 +1247,832 @@ SELECT city FROM departments;</code></pre>
     },
 ]
 
+# ── Additional sections appended to CURRICULUM ────────────────────────────────
+CURRICULUM += [
+    {
+        "id": "string-functions-advanced",
+        "title": "Advanced String Functions",
+        "icon": "🔤",
+        "lessons": [
+            {
+                "slug": "lpad-rpad-initcap",
+                "title": "LPAD, RPAD & INITCAP",
+                "theory": """
+<h2>LPAD, RPAD & INITCAP</h2>
+<p>These functions format strings by padding or capitalising them.</p>
+<table class="ops-table">
+  <tr><th>Function</th><th>What it does</th><th>Example</th></tr>
+  <tr><td>LPAD(s, n, pad)</td><td>Pad string from the LEFT to length n</td><td>LPAD('7', 4, '0') → '0007'</td></tr>
+  <tr><td>RPAD(s, n, pad)</td><td>Pad string from the RIGHT to length n</td><td>RPAD('Hi', 5, '.') → 'Hi...'</td></tr>
+  <tr><td>INITCAP(s)</td><td>Capitalise first letter of each word</td><td>INITCAP('hello world') → 'Hello World'</td></tr>
+</table>
+<h3>💡 Note</h3>
+<p>SQLite does not have native LPAD/RPAD/INITCAP. We simulate them with <code>PRINTF</code>, <code>SUBSTR</code>, and <code>UPPER</code>/<code>LOWER</code>. In Oracle/PostgreSQL/MySQL these are built-in.</p>
+<h3>LPAD in SQLite (simulate with PRINTF)</h3>
+<pre><code>-- Left-pad ID to 4 digits with zeros
+PRINTF('%04d', id)</code></pre>
+<h3>INITCAP in SQLite (simulate)</h3>
+<pre><code>UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2))</code></pre>
+""",
+                "examples": [
+                    {"title": "LPAD — zero-pad employee ID", "sql": "SELECT name,\n       PRINTF('%05d', id) AS padded_id\nFROM employees;"},
+                    {"title": "RPAD — pad with dots", "sql": "SELECT name,\n       name || SUBSTR('..........', 1, 12 - LENGTH(name)) AS padded_name\nFROM employees;"},
+                    {"title": "INITCAP simulation", "sql": "SELECT name,\n       UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2)) AS title_case\nFROM employees;"},
+                    {"title": "Format invoice number", "sql": "SELECT id,\n       'INV-' || PRINTF('%06d', id) AS invoice_number\nFROM orders;"},
+                    {"title": "Right-align prices", "sql": "SELECT name,\n       PRINTF('%10.2f', price) AS right_aligned_price\nFROM products;"},
+                ],
+                "challenge": {
+                    "question": "Show each product's name in Title Case (first letter upper, rest lower) and its ID zero-padded to 4 digits like <code>0001</code>.",
+                    "hint": "UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2)) and PRINTF('%04d', id)",
+                    "answer": "SELECT PRINTF('%04d', id) AS padded_id, UPPER(SUBSTR(name,1,1)) || LOWER(SUBSTR(name,2)) AS title_name FROM products;"
+                }
+            },
+            {
+                "slug": "ascii-chr-translate",
+                "title": "ASCII, CHR & TRANSLATE",
+                "theory": """
+<h2>ASCII, CHR & TRANSLATE</h2>
+<table class="ops-table">
+  <tr><th>Function</th><th>What it does</th></tr>
+  <tr><td>UNICODE(s)</td><td>Returns the ASCII/Unicode code of the first character (SQLite uses UNICODE)</td></tr>
+  <tr><td>CHAR(n)</td><td>Returns the character for a given ASCII code</td></tr>
+  <tr><td>HEX(s)</td><td>Returns hexadecimal representation of a string</td></tr>
+</table>
+<h3>ASCII codes you should know</h3>
+<ul>
+  <li>65–90 = A–Z (uppercase)</li>
+  <li>97–122 = a–z (lowercase)</li>
+  <li>48–57 = 0–9 (digits)</li>
+  <li>32 = space</li>
+</ul>
+<h3>TRANSLATE (Oracle/PostgreSQL)</h3>
+<p>Replaces individual characters one-for-one (like a character-level REPLACE). SQLite doesn't have it natively — use multiple REPLACE calls instead.</p>
+<pre><code>-- Simulate: replace vowels with *
+REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(name,'a','*'),'e','*'),'i','*'),'o','*'),'u','*')</code></pre>
+""",
+                "examples": [
+                    {"title": "UNICODE — char code", "sql": "SELECT UNICODE('A') AS code_A,\n       UNICODE('a') AS code_a,\n       UNICODE('0') AS code_0;"},
+                    {"title": "CHAR — code to character", "sql": "SELECT CHAR(65) AS A,\n       CHAR(97) AS a,\n       CHAR(48) AS zero;"},
+                    {"title": "Build alphabet", "sql": "WITH RECURSIVE nums(n) AS (\n  SELECT 65 UNION ALL SELECT n+1 FROM nums WHERE n < 90\n)\nSELECT n AS ascii_code, CHAR(n) AS letter FROM nums;"},
+                    {"title": "HEX encoding", "sql": "SELECT name, HEX(name) AS hex_name FROM employees LIMIT 3;"},
+                    {"title": "Translate vowels (simulate)", "sql": "SELECT name,\n  REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(\n    LOWER(name),'a','*'),'e','*'),'i','*'),'o','*'),'u','*')\n  AS masked_vowels\nFROM employees;"},
+                ],
+                "challenge": {
+                    "question": "Show the UNICODE (ASCII code) of the first character of every employee's name, and the CHAR of code 90.",
+                    "hint": "UNICODE(name) and CHAR(90)",
+                    "answer": "SELECT name, UNICODE(name) AS first_char_code, CHAR(90) AS char_90 FROM employees;"
+                }
+            },
+            {
+                "slug": "group-concat",
+                "title": "GROUP_CONCAT & String Aggregation",
+                "theory": """
+<h2>GROUP_CONCAT</h2>
+<p><code>GROUP_CONCAT</code> aggregates multiple row values into a <strong>single comma-separated string</strong>.</p>
+<pre><code>SELECT dept_id,
+  GROUP_CONCAT(name) AS team_members
+FROM employees
+GROUP BY dept_id;</code></pre>
+<h3>Custom separator</h3>
+<pre><code>GROUP_CONCAT(name, ' | ')</code></pre>
+<h3>With ORDER BY inside</h3>
+<pre><code>GROUP_CONCAT(name ORDER BY name ASC SEPARATOR ', ')
+-- Note: ORDER BY inside GROUP_CONCAT is MySQL/PostgreSQL syntax
+-- SQLite: use a subquery to pre-sort</code></pre>
+<h3>DISTINCT inside GROUP_CONCAT</h3>
+<pre><code>GROUP_CONCAT(DISTINCT category)</code></pre>
+<p>In standard SQL (PostgreSQL) this is <code>STRING_AGG(name, ', ')</code>. In SQL Server it's <code>STRING_AGG</code>.</p>
+""",
+                "examples": [
+                    {"title": "List employees per dept", "sql": "SELECT dept_id,\n       GROUP_CONCAT(name) AS team\nFROM employees\nGROUP BY dept_id;"},
+                    {"title": "Custom separator", "sql": "SELECT dept_id,\n       GROUP_CONCAT(name, ' | ') AS team\nFROM employees\nGROUP BY dept_id;"},
+                    {"title": "DISTINCT categories", "sql": "SELECT GROUP_CONCAT(DISTINCT category, ', ') AS all_categories\nFROM products;"},
+                    {"title": "Courses per student", "sql": "SELECT s.name,\n       GROUP_CONCAT(c.title, ', ') AS courses\nFROM students s\nJOIN courses c ON s.id = c.student_id\nGROUP BY s.name;"},
+                    {"title": "Tags with count", "sql": "SELECT category,\n       COUNT(*) AS count,\n       GROUP_CONCAT(name, ', ') AS products_list\nFROM products\nGROUP BY category;"},
+                ],
+                "challenge": {
+                    "question": "Show each department id and a pipe-separated list of employee names in that department.",
+                    "hint": "GROUP_CONCAT(name, ' | ') GROUP BY dept_id",
+                    "answer": "SELECT dept_id, GROUP_CONCAT(name, ' | ') AS employees FROM employees GROUP BY dept_id;"
+                }
+            },
+        ]
+    },
+    {
+        "id": "decode-sign-trunc",
+        "title": "DECODE, SIGN & TRUNC",
+        "icon": "🔁",
+        "lessons": [
+            {
+                "slug": "decode",
+                "title": "DECODE Function",
+                "theory": """
+<h2>DECODE Function</h2>
+<p><code>DECODE</code> is an Oracle/DB2 function that works like a CASE expression — it compares a value to a series of options and returns the matching result.</p>
+<h3>Syntax (Oracle)</h3>
+<pre><code>DECODE(expression, search1, result1, search2, result2, ..., default)</code></pre>
+<h3>Equivalent CASE</h3>
+<pre><code>CASE expression
+  WHEN search1 THEN result1
+  WHEN search2 THEN result2
+  ELSE default
+END</code></pre>
+<p>SQLite does not have DECODE — use CASE instead. This lesson shows both so you're ready for Oracle/MySQL environments.</p>
+<h3>DECODE vs CASE</h3>
+<ul>
+  <li>DECODE is shorter for simple equality checks</li>
+  <li>CASE is more flexible (supports ranges, LIKE, IS NULL)</li>
+  <li>CASE is ANSI standard — works everywhere</li>
+</ul>
+""",
+                "examples": [
+                    {"title": "DECODE — dept name (Oracle syntax shown, run CASE)", "sql": "-- DECODE syntax (Oracle):\n-- DECODE(dept_id, 1,'Engineering', 2,'Marketing', 3,'Finance','HR')\n\n-- CASE equivalent (runs in SQLite):\nSELECT name,\n  CASE dept_id\n    WHEN 1 THEN 'Engineering'\n    WHEN 2 THEN 'Marketing'\n    WHEN 3 THEN 'Finance'\n    ELSE 'HR'\n  END AS department\nFROM employees;"},
+                    {"title": "DECODE — grade label", "sql": "-- DECODE(grade,'A','Excellent','B','Good','C','Average','Below Average')\n\nSELECT name, grade,\n  CASE grade\n    WHEN 'A' THEN 'Excellent'\n    WHEN 'B' THEN 'Good'\n    WHEN 'C' THEN 'Average'\n    ELSE 'Below Average'\n  END AS performance\nFROM students;"},
+                    {"title": "DECODE — order status label", "sql": "SELECT customer, status,\n  CASE status\n    WHEN 'completed' THEN '✅ Done'\n    WHEN 'shipped'   THEN '🚚 On the way'\n    WHEN 'pending'   THEN '⏳ Waiting'\n    ELSE '❓ Unknown'\n  END AS status_label\nFROM orders;"},
+                    {"title": "DECODE with NULL handling", "sql": "-- DECODE treats NULL = NULL (unlike =)\n-- CASE equivalent:\nSELECT name,\n  CASE\n    WHEN salary IS NULL THEN 'No salary set'\n    ELSE PRINTF('$%.0f', salary)\n  END AS salary_display\nFROM employees;"},
+                ],
+                "challenge": {
+                    "question": "Using CASE (DECODE equivalent), label each product: category 'Electronics' → 'Tech', 'Furniture' → 'Home', anything else → 'Other'.",
+                    "hint": "CASE category WHEN 'Electronics' THEN 'Tech' ...",
+                    "answer": "SELECT name, category, CASE category WHEN 'Electronics' THEN 'Tech' WHEN 'Furniture' THEN 'Home' ELSE 'Other' END AS label FROM products;"
+                }
+            },
+            {
+                "slug": "sign-trunc-mod",
+                "title": "SIGN, TRUNC & MOD",
+                "theory": """
+<h2>SIGN, TRUNC & MOD</h2>
+<h3>SIGN(n)</h3>
+<p>Returns <code>-1</code> if n is negative, <code>0</code> if zero, <code>1</code> if positive.</p>
+<pre><code>SIGN(-50)  → -1
+SIGN(0)    →  0
+SIGN(100)  →  1</code></pre>
+<h3>TRUNC(n, d)</h3>
+<p>Truncates (cuts off) decimal places WITHOUT rounding. Different from ROUND which rounds up/down.</p>
+<pre><code>TRUNC(3.987, 2)  → 3.98   (not 3.99)
+TRUNC(3.987, 0)  → 3      (integer part only)
+TRUNC(-3.7, 0)   → -3     (towards zero)</code></pre>
+<p>In SQLite: use <code>CAST(n AS INTEGER)</code> or arithmetic for truncation.</p>
+<h3>MOD(n, m) / n % m</h3>
+<p>Returns the remainder after dividing n by m.</p>
+<pre><code>MOD(10, 3)  → 1    (10 = 3×3 + 1)
+MOD(15, 5)  → 0    (exact division)
+7 % 2       → 1    (odd number check)</code></pre>
+""",
+                "examples": [
+                    {"title": "SIGN function", "sql": "SELECT name,\n       salary - 80000 AS diff,\n       CASE WHEN salary - 80000 < 0 THEN -1\n            WHEN salary - 80000 > 0 THEN 1\n            ELSE 0 END AS sign_val\nFROM employees;"},
+                    {"title": "TRUNC — truncate salary", "sql": "-- Truncate to thousands (SQLite)\nSELECT name, salary,\n       CAST(salary/1000 AS INTEGER) * 1000 AS truncated_to_k\nFROM employees;"},
+                    {"title": "TRUNC decimal places", "sql": "SELECT price,\n       ROUND(price, 1)                        AS rounded,\n       CAST(price * 10 AS INTEGER) / 10.0     AS truncated_1dp\nFROM products;"},
+                    {"title": "MOD — even or odd salary", "sql": "SELECT name, salary,\n       CASE WHEN CAST(salary AS INTEGER) % 2 = 0\n            THEN 'Even' ELSE 'Odd' END AS parity\nFROM employees;"},
+                    {"title": "MOD — find every 3rd employee", "sql": "SELECT id, name\nFROM employees\nWHERE id % 3 = 0;"},
+                    {"title": "MOD — batch grouping", "sql": "SELECT id, name,\n       (id % 3) + 1 AS batch_number\nFROM employees\nORDER BY batch_number, id;"},
+                ],
+                "challenge": {
+                    "question": "Show each product's price, its price truncated to the nearest integer (no rounding), and whether its id is even or odd.",
+                    "hint": "CAST(price AS INTEGER) for truncate, id % 2 for even/odd",
+                    "answer": "SELECT name, price, CAST(price AS INTEGER) AS truncated, CASE WHEN id % 2 = 0 THEN 'Even' ELSE 'Odd' END AS id_parity FROM products;"
+                }
+            },
+        ]
+    },
+    {
+        "id": "advanced-date",
+        "title": "Advanced Date Functions",
+        "icon": "📅",
+        "lessons": [
+            {
+                "slug": "date-add-months",
+                "title": "ADD_MONTHS, LAST_DAY & NEXT_DAY",
+                "theory": """
+<h2>ADD_MONTHS, LAST_DAY & NEXT_DAY</h2>
+<p>These are Oracle/MySQL date functions. SQLite simulates them using <code>DATE()</code> modifiers.</p>
+<table class="ops-table">
+  <tr><th>Oracle Function</th><th>SQLite Equivalent</th></tr>
+  <tr><td>ADD_MONTHS(date, n)</td><td>DATE(date, '+N months')</td></tr>
+  <tr><td>LAST_DAY(date)</td><td>DATE(date, 'start of month', '+1 month', '-1 day')</td></tr>
+  <tr><td>MONTHS_BETWEEN(d1, d2)</td><td>(julianday(d1)-julianday(d2))/30.44</td></tr>
+  <tr><td>NEXT_DAY(date, weekday)</td><td>No direct equivalent — use DATE + modifiers</td></tr>
+  <tr><td>SYSDATE / NOW()</td><td>DATE('now') / DATETIME('now')</td></tr>
+  <tr><td>TRUNC(date, 'MM')</td><td>DATE(date, 'start of month')</td></tr>
+  <tr><td>TRUNC(date, 'YYYY')</td><td>DATE(date, 'start of year')</td></tr>
+</table>
+""",
+                "examples": [
+                    {"title": "ADD_MONTHS (+3 months)", "sql": "SELECT hire_date,\n       DATE(hire_date, '+3 months') AS plus_3_months,\n       DATE(hire_date, '-6 months') AS minus_6_months\nFROM employees;"},
+                    {"title": "LAST_DAY of month", "sql": "SELECT hire_date,\n       DATE(hire_date, 'start of month', '+1 month', '-1 day') AS last_day\nFROM employees;"},
+                    {"title": "MONTHS_BETWEEN (approximate)", "sql": "SELECT name, hire_date,\n       ROUND((julianday('now') - julianday(hire_date)) / 30.44) AS months_employed\nFROM employees\nORDER BY months_employed DESC;"},
+                    {"title": "Start of month / year", "sql": "SELECT hire_date,\n       DATE(hire_date, 'start of month') AS month_start,\n       DATE(hire_date, 'start of year')  AS year_start\nFROM employees;"},
+                    {"title": "Age calculation", "sql": "SELECT name, hire_date,\n       strftime('%Y','now') - strftime('%Y', hire_date) AS approx_years\nFROM employees\nORDER BY approx_years DESC;"},
+                    {"title": "Date formatting", "sql": "SELECT name,\n       strftime('%d-%m-%Y', hire_date) AS formatted_date,\n       strftime('%B', hire_date) AS month_name\nFROM employees;"},
+                ],
+                "challenge": {
+                    "question": "For each order, show the order date and what date it would be exactly 30 days later (delivery estimate). Name it <code>delivery_date</code>.",
+                    "hint": "DATE(order_date, '+30 days')",
+                    "answer": "SELECT customer, order_date, DATE(order_date, '+30 days') AS delivery_date FROM orders;"
+                }
+            },
+            {
+                "slug": "to-char-to-date",
+                "title": "TO_CHAR, TO_DATE & TO_NUMBER",
+                "theory": """
+<h2>TO_CHAR, TO_DATE & TO_NUMBER</h2>
+<p>These are Oracle conversion functions for formatting and parsing dates and numbers.</p>
+<table class="ops-table">
+  <tr><th>Oracle Function</th><th>Purpose</th><th>SQLite Equivalent</th></tr>
+  <tr><td>TO_CHAR(date, fmt)</td><td>Date → formatted string</td><td>strftime(fmt, date)</td></tr>
+  <tr><td>TO_DATE(string, fmt)</td><td>String → date</td><td>dates stored as text, use direct comparison</td></tr>
+  <tr><td>TO_NUMBER(string)</td><td>String → number</td><td>CAST(string AS REAL)</td></tr>
+  <tr><td>TO_CHAR(number, fmt)</td><td>Number → formatted string</td><td>PRINTF(fmt, number)</td></tr>
+</table>
+<h3>Common TO_CHAR format codes (Oracle → strftime)</h3>
+<table class="ops-table">
+  <tr><th>Oracle</th><th>SQLite strftime</th><th>Output</th></tr>
+  <tr><td>YYYY</td><td>%Y</td><td>2024</td></tr>
+  <tr><td>MM</td><td>%m</td><td>01–12</td></tr>
+  <tr><td>DD</td><td>%d</td><td>01–31</td></tr>
+  <tr><td>DY</td><td>%w (0=Sun)</td><td>Day of week</td></tr>
+  <tr><td>HH24:MI:SS</td><td>%H:%M:%S</td><td>14:30:00</td></tr>
+</table>
+""",
+                "examples": [
+                    {"title": "TO_CHAR date formatting", "sql": "-- TO_CHAR(hire_date, 'DD-MON-YYYY') in Oracle\n-- SQLite equivalent:\nSELECT name,\n       strftime('%d-%m-%Y', hire_date) AS formatted\nFROM employees;"},
+                    {"title": "TO_CHAR number formatting", "sql": "-- TO_CHAR(salary, '$999,999') in Oracle\n-- SQLite PRINTF equivalent:\nSELECT name,\n       PRINTF('$%,.0f', salary) AS formatted_salary\nFROM employees;"},
+                    {"title": "TO_NUMBER conversion", "sql": "-- TO_NUMBER('123.45') in Oracle\n-- SQLite equivalent:\nSELECT CAST('123.45' AS REAL) AS converted_number,\n       CAST('42' AS INTEGER) + 100 AS math_result;"},
+                    {"title": "Extract date parts", "sql": "SELECT name, hire_date,\n       strftime('%Y', hire_date) AS year,\n       strftime('%m', hire_date) AS month,\n       strftime('%d', hire_date) AS day,\n       CASE CAST(strftime('%w', hire_date) AS INTEGER)\n         WHEN 0 THEN 'Sunday'   WHEN 1 THEN 'Monday'\n         WHEN 2 THEN 'Tuesday'  WHEN 3 THEN 'Wednesday'\n         WHEN 4 THEN 'Thursday' WHEN 5 THEN 'Friday'\n         ELSE 'Saturday'\n       END AS day_of_week\nFROM employees;"},
+                ],
+                "challenge": {
+                    "question": "Format each employee's hire_date as <code>YYYY/MM/DD</code> and name it <code>formatted_date</code>.",
+                    "hint": "strftime('%Y/%m/%d', hire_date)",
+                    "answer": "SELECT name, strftime('%Y/%m/%d', hire_date) AS formatted_date FROM employees;"
+                }
+            },
+        ]
+    },
+    {
+        "id": "advanced-queries",
+        "title": "Advanced Query Techniques",
+        "icon": "⚡",
+        "lessons": [
+            {
+                "slug": "pivot-unpivot",
+                "title": "PIVOT & UNPIVOT",
+                "theory": """
+<h2>PIVOT & UNPIVOT</h2>
+<h3>PIVOT — Rows to Columns</h3>
+<p>PIVOT transforms row values into column headers — like rotating a table 90°.</p>
+<p>Native PIVOT exists in SQL Server and Oracle. In SQLite/PostgreSQL we use conditional aggregation:</p>
+<pre><code>SELECT dept_id,
+  SUM(CASE WHEN grade='A' THEN 1 ELSE 0 END) AS grade_A,
+  SUM(CASE WHEN grade='B' THEN 1 ELSE 0 END) AS grade_B
+FROM students
+GROUP BY dept_id;</code></pre>
+<h3>UNPIVOT — Columns to Rows</h3>
+<p>UNPIVOT does the reverse — turns columns into rows. Use UNION ALL to simulate in SQLite:</p>
+<pre><code>SELECT name, 'salary' AS metric, salary AS value FROM employees
+UNION ALL
+SELECT name, 'age', age FROM employees;</code></pre>
+""",
+                "examples": [
+                    {"title": "PIVOT — grades as columns", "sql": "SELECT\n  SUM(CASE WHEN grade='A' THEN 1 ELSE 0 END) AS grade_A,\n  SUM(CASE WHEN grade='B' THEN 1 ELSE 0 END) AS grade_B,\n  SUM(CASE WHEN grade='C' THEN 1 ELSE 0 END) AS grade_C\nFROM students;"},
+                    {"title": "PIVOT — category totals as columns", "sql": "SELECT\n  SUM(CASE WHEN category='Electronics' THEN price END) AS electronics_total,\n  SUM(CASE WHEN category='Furniture'   THEN price END) AS furniture_total,\n  SUM(CASE WHEN category='Stationery'  THEN price END) AS stationery_total\nFROM products;"},
+                    {"title": "PIVOT — order status counts", "sql": "SELECT\n  COUNT(CASE WHEN status='completed' THEN 1 END) AS completed,\n  COUNT(CASE WHEN status='pending'   THEN 1 END) AS pending,\n  COUNT(CASE WHEN status='shipped'   THEN 1 END) AS shipped\nFROM orders;"},
+                    {"title": "UNPIVOT — employee stats as rows", "sql": "SELECT name, 'salary' AS metric, CAST(salary AS TEXT) AS value\nFROM employees\nUNION ALL\nSELECT name, 'age', CAST(age AS TEXT)\nFROM employees\nORDER BY name, metric;"},
+                ],
+                "challenge": {
+                    "question": "PIVOT the products table: show one row with total stock for each category as separate columns: <code>electronics_stock</code>, <code>furniture_stock</code>, <code>stationery_stock</code>.",
+                    "hint": "SUM(CASE WHEN category='Electronics' THEN stock ELSE 0 END)",
+                    "answer": "SELECT SUM(CASE WHEN category='Electronics' THEN stock ELSE 0 END) AS electronics_stock, SUM(CASE WHEN category='Furniture' THEN stock ELSE 0 END) AS furniture_stock, SUM(CASE WHEN category='Stationery' THEN stock ELSE 0 END) AS stationery_stock FROM products;"
+                }
+            },
+            {
+                "slug": "rollup-cube",
+                "title": "ROLLUP, CUBE & GROUPING SETS",
+                "theory": """
+<h2>ROLLUP, CUBE & GROUPING SETS</h2>
+<p>These are extensions of GROUP BY that produce subtotals and grand totals automatically.</p>
+<h3>ROLLUP</h3>
+<p>Produces subtotals along a hierarchy (right to left) plus a grand total.</p>
+<pre><code>SELECT dept_id, grade, COUNT(*)
+FROM students
+GROUP BY ROLLUP(dept_id, grade);</code></pre>
+<p>Gives: counts per (dept+grade) → per dept → grand total</p>
+<h3>CUBE</h3>
+<p>Produces ALL possible subtotal combinations.</p>
+<pre><code>GROUP BY CUBE(col1, col2)</code></pre>
+<h3>GROUPING SETS</h3>
+<p>Specify exactly which groupings you want:</p>
+<pre><code>GROUP BY GROUPING SETS((col1, col2), (col1), ())</code></pre>
+<h3>GROUPING() function</h3>
+<p>Returns 1 when the column is a subtotal row (NULL due to ROLLUP), 0 otherwise. Helps identify which rows are subtotals.</p>
+<p>Note: SQLite has limited ROLLUP support. Full support in PostgreSQL, Oracle, MySQL 8+.</p>
+""",
+                "examples": [
+                    {"title": "ROLLUP simulation with UNION ALL", "sql": "-- Detail rows\nSELECT category, ROUND(SUM(price),2) AS total, 'detail' AS row_type\nFROM products GROUP BY category\nUNION ALL\n-- Grand total\nSELECT 'ALL CATEGORIES', ROUND(SUM(price),2), 'grand total'\nFROM products\nORDER BY row_type DESC, category;"},
+                    {"title": "Subtotals by dept and overall", "sql": "SELECT dept_id, COUNT(*) AS count, ROUND(AVG(salary),0) AS avg_sal\nFROM employees\nGROUP BY dept_id\nUNION ALL\nSELECT NULL, COUNT(*), ROUND(AVG(salary),0)\nFROM employees\nORDER BY dept_id;"},
+                    {"title": "GROUPING SETS simulation", "sql": "-- By category\nSELECT category, NULL AS name, COUNT(*) AS cnt\nFROM products GROUP BY category\nUNION ALL\n-- By name\nSELECT NULL, name, 1\nFROM products\nUNION ALL\n-- Grand total\nSELECT NULL, NULL, COUNT(*) FROM products\nLIMIT 15;"},
+                ],
+                "challenge": {
+                    "question": "Show the total salary per department, then a grand total row at the bottom using UNION ALL. Label the grand total row dept_id as <code>NULL</code>.",
+                    "hint": "SELECT dept_id, SUM(salary) ... UNION ALL SELECT NULL, SUM(salary)...",
+                    "answer": "SELECT dept_id, SUM(salary) AS total_salary FROM employees GROUP BY dept_id UNION ALL SELECT NULL, SUM(salary) FROM employees ORDER BY dept_id;"
+                }
+            },
+            {
+                "slug": "merge-upsert",
+                "title": "MERGE / UPSERT",
+                "theory": """
+<h2>MERGE / UPSERT</h2>
+<p><strong>MERGE</strong> (also called UPSERT = UPDATE + INSERT) combines INSERT and UPDATE in one statement — insert if not exists, update if it does.</p>
+<h3>Oracle / SQL Server MERGE syntax</h3>
+<pre><code>MERGE INTO target_table t
+USING source_table s ON (t.id = s.id)
+WHEN MATCHED THEN
+  UPDATE SET t.salary = s.salary
+WHEN NOT MATCHED THEN
+  INSERT (id, name, salary) VALUES (s.id, s.name, s.salary);</code></pre>
+<h3>SQLite — INSERT OR REPLACE</h3>
+<pre><code>INSERT OR REPLACE INTO employees (id, name, salary)
+VALUES (1, 'Alice', 95000);</code></pre>
+<h3>SQLite — INSERT OR IGNORE</h3>
+<pre><code>INSERT OR IGNORE INTO employees (id, name)
+VALUES (1, 'Alice');  -- skips if id=1 already exists</code></pre>
+<h3>SQLite — ON CONFLICT (SQLite 3.24+)</h3>
+<pre><code>INSERT INTO employees (id, name, salary)
+VALUES (1, 'Alice', 95000)
+ON CONFLICT(id) DO UPDATE SET salary = excluded.salary;</code></pre>
+""",
+                "examples": [
+                    {"title": "INSERT OR IGNORE", "sql": "-- Try to insert existing ID (will be ignored)\nINSERT OR IGNORE INTO students (id, name, grade, score)\nVALUES (1, 'Liam', 'A', 95);\n\n-- Try new ID (will insert)\nINSERT OR IGNORE INTO students (id, name, grade, score)\nVALUES (99, 'NewKid', 'B', 88);\n\nSELECT * FROM students;"},
+                    {"title": "INSERT OR REPLACE (UPSERT)", "sql": "-- Replaces row if id exists, inserts if not\nINSERT OR REPLACE INTO students (id, name, grade, score)\nVALUES (1, 'Liam UPDATED', 'A+', 100);\n\nSELECT * FROM students WHERE id = 1;"},
+                    {"title": "ON CONFLICT DO UPDATE", "sql": "INSERT INTO students (id, name, grade, score)\nVALUES (2, 'Mia', 'A', 95)\nON CONFLICT(id)\nDO UPDATE SET score = excluded.score, grade = excluded.grade;\n\nSELECT * FROM students WHERE id = 2;"},
+                    {"title": "Bulk UPSERT pattern", "sql": "INSERT OR REPLACE INTO inventory (id, product_id, quantity, updated_at)\nVALUES\n  (1, 1, 999, DATE('now')),\n  (2, 2, 888, DATE('now'));\n\nSELECT * FROM inventory;"},
+                ],
+                "challenge": {
+                    "question": "Use INSERT OR IGNORE to try inserting a student with id=1 (already exists) and id=50 (new). Then SELECT all students to confirm only id=50 was added.",
+                    "hint": "INSERT OR IGNORE INTO students ...",
+                    "answer": "INSERT OR IGNORE INTO students (id,name,grade,score) VALUES (1,'Dup','A',99),(50,'Brand New','B',85);\nSELECT * FROM students ORDER BY id;"
+                }
+            },
+            {
+                "slug": "regexp-pattern",
+                "title": "Pattern Matching & REGEXP",
+                "theory": """
+<h2>Pattern Matching & REGEXP</h2>
+<h3>LIKE (recap)</h3>
+<ul>
+  <li><code>%</code> — any sequence of characters</li>
+  <li><code>_</code> — exactly one character</li>
+</ul>
+<pre><code>WHERE name LIKE 'A%'   -- starts with A
+WHERE name LIKE '%son'  -- ends with son
+WHERE name LIKE '_ob'   -- 3 chars, ends in ob</code></pre>
+<h3>GLOB (SQLite)</h3>
+<p>Like LIKE but case-sensitive and uses Unix-style wildcards:</p>
+<ul>
+  <li><code>*</code> — any sequence of characters</li>
+  <li><code>?</code> — exactly one character</li>
+  <li><code>[abc]</code> — any one of a, b, c</li>
+  <li><code>[a-z]</code> — range</li>
+</ul>
+<pre><code>WHERE name GLOB 'A*'      -- starts with A (case-sensitive)
+WHERE email GLOB '*@*.com' -- email pattern</code></pre>
+<h3>REGEXP (MySQL/PostgreSQL)</h3>
+<pre><code>WHERE name REGEXP '^[A-E]'   -- starts with A-E
+WHERE email REGEXP '@gmail'  -- contains @gmail</code></pre>
+<p>SQLite supports REGEXP only if a user-defined function is registered.</p>
+""",
+                "examples": [
+                    {"title": "LIKE patterns", "sql": "SELECT name FROM employees WHERE name LIKE 'A%';\n-- starts with A\n\nSELECT name FROM employees WHERE name LIKE '%e';\n-- ends with e"},
+                    {"title": "LIKE with underscore", "sql": "SELECT name FROM employees\nWHERE name LIKE '_a%';\n-- second letter is 'a'"},
+                    {"title": "GLOB — case-sensitive", "sql": "SELECT name FROM employees\nWHERE name GLOB 'A*';\n-- starts with A (case-sensitive)"},
+                    {"title": "GLOB — character class", "sql": "SELECT name FROM employees\nWHERE name GLOB '[A-F]*';\n-- starts with A, B, C, D, E, or F"},
+                    {"title": "GLOB — email pattern", "sql": "SELECT name, email FROM employees\nWHERE email GLOB '*@company.com';"},
+                    {"title": "NOT LIKE", "sql": "SELECT name FROM employees\nWHERE name NOT LIKE '%e%';\n-- names with no 'e'"},
+                ],
+                "challenge": {
+                    "question": "Use GLOB to find all employees whose name starts with a letter between A and F (A, B, C, D, E, or F).",
+                    "hint": "GLOB '[A-F]*'",
+                    "answer": "SELECT name FROM employees WHERE name GLOB '[A-F]*';"
+                }
+            },
+            {
+                "slug": "fetch-offset",
+                "title": "FETCH FIRST & OFFSET ROWS",
+                "theory": """
+<h2>FETCH FIRST & OFFSET ROWS ONLY</h2>
+<p>This is the ANSI SQL standard for pagination — an alternative to LIMIT/OFFSET (which is MySQL/SQLite syntax).</p>
+<h3>Syntax (ANSI SQL — works in Oracle 12c+, PostgreSQL, SQL Server 2012+)</h3>
+<pre><code>SELECT * FROM employees
+ORDER BY salary DESC
+OFFSET 0 ROWS FETCH FIRST 5 ROWS ONLY;</code></pre>
+<h3>Page 2 (skip first 5, take next 5)</h3>
+<pre><code>SELECT * FROM employees
+ORDER BY salary DESC
+OFFSET 5 ROWS FETCH NEXT 5 ROWS ONLY;</code></pre>
+<h3>SQLite equivalent</h3>
+<pre><code>SELECT * FROM employees
+ORDER BY salary DESC
+LIMIT 5 OFFSET 5;</code></pre>
+<h3>Comparison</h3>
+<table class="ops-table">
+  <tr><th>Database</th><th>Syntax</th></tr>
+  <tr><td>MySQL / SQLite</td><td>LIMIT n OFFSET m</td></tr>
+  <tr><td>Oracle / PostgreSQL / SQL Server</td><td>OFFSET m ROWS FETCH NEXT n ROWS ONLY</td></tr>
+  <tr><td>SQL Server (old)</td><td>TOP n (no offset)</td></tr>
+</table>
+""",
+                "examples": [
+                    {"title": "LIMIT equivalent (SQLite)", "sql": "SELECT name, salary FROM employees\nORDER BY salary DESC\nLIMIT 5;"},
+                    {"title": "Pagination — page 1", "sql": "SELECT name, salary FROM employees\nORDER BY salary DESC\nLIMIT 3 OFFSET 0;  -- page 1"},
+                    {"title": "Pagination — page 2", "sql": "SELECT name, salary FROM employees\nORDER BY salary DESC\nLIMIT 3 OFFSET 3;  -- page 2"},
+                    {"title": "Pagination — page 3", "sql": "SELECT name, salary FROM employees\nORDER BY salary DESC\nLIMIT 3 OFFSET 6;  -- page 3"},
+                    {"title": "FETCH FIRST (SQLite supports it too)", "sql": "SELECT name, salary FROM employees\nORDER BY salary DESC\nLIMIT 5 OFFSET 0;\n-- ANSI equivalent: OFFSET 0 ROWS FETCH FIRST 5 ROWS ONLY"},
+                ],
+                "challenge": {
+                    "question": "Show the 4th, 5th, and 6th highest-paid employees (page 2 of a 3-per-page result) using LIMIT and OFFSET.",
+                    "hint": "ORDER BY salary DESC LIMIT 3 OFFSET 3",
+                    "answer": "SELECT name, salary FROM employees ORDER BY salary DESC LIMIT 3 OFFSET 3;"
+                }
+            },
+        ]
+    },
+    {
+        "id": "constraints",
+        "title": "Constraints & Integrity",
+        "icon": "🔒",
+        "lessons": [
+            {
+                "slug": "constraints-deep",
+                "title": "Constraints Deep Dive",
+                "theory": """
+<h2>Constraints</h2>
+<p>Constraints enforce rules on columns to ensure data integrity — bad data is rejected at the database level.</p>
+<table class="ops-table">
+  <tr><th>Constraint</th><th>Rule it enforces</th></tr>
+  <tr><td>PRIMARY KEY</td><td>Unique + NOT NULL. One per table.</td></tr>
+  <tr><td>NOT NULL</td><td>Column must always have a value</td></tr>
+  <tr><td>UNIQUE</td><td>No duplicate values (NULLs allowed)</td></tr>
+  <tr><td>CHECK(expr)</td><td>Value must pass a condition</td></tr>
+  <tr><td>DEFAULT value</td><td>Auto-fills if no value provided</td></tr>
+  <tr><td>FOREIGN KEY</td><td>Value must exist in another table</td></tr>
+</table>
+<h3>Column-level vs Table-level</h3>
+<pre><code>-- Column-level (inline)
+id INTEGER PRIMARY KEY
+
+-- Table-level (at end)
+CONSTRAINT pk_emp PRIMARY KEY(id, dept_id)
+CONSTRAINT fk_dept FOREIGN KEY(dept_id) REFERENCES departments(id)</code></pre>
+<h3>ON DELETE / ON UPDATE actions (Foreign Keys)</h3>
+<table class="ops-table">
+  <tr><th>Action</th><th>Behaviour</th></tr>
+  <tr><td>CASCADE</td><td>Delete/update child rows automatically</td></tr>
+  <tr><td>SET NULL</td><td>Set child column to NULL</td></tr>
+  <tr><td>RESTRICT</td><td>Prevent deletion if child rows exist</td></tr>
+  <tr><td>NO ACTION</td><td>Default — like RESTRICT</td></tr>
+</table>
+""",
+                "examples": [
+                    {"title": "All constraints together", "sql": "CREATE TABLE IF NOT EXISTS accounts (\n  id       INTEGER PRIMARY KEY AUTOINCREMENT,\n  username TEXT    NOT NULL UNIQUE,\n  email    TEXT    NOT NULL UNIQUE,\n  balance  REAL    DEFAULT 0.0 CHECK(balance >= 0),\n  status   TEXT    DEFAULT 'active' CHECK(status IN ('active','inactive'))\n);\nSELECT * FROM accounts;"},
+                    {"title": "CHECK constraint rejected", "sql": "CREATE TABLE IF NOT EXISTS scores (\n  id    INTEGER PRIMARY KEY,\n  score INTEGER CHECK(score BETWEEN 0 AND 100)\n);\n-- This should succeed:\nINSERT INTO scores VALUES (1, 95);\n-- This should fail:\nINSERT INTO scores VALUES (2, 150);"},
+                    {"title": "FOREIGN KEY with CASCADE", "sql": "CREATE TABLE IF NOT EXISTS parent (id INTEGER PRIMARY KEY, name TEXT);\nCREATE TABLE IF NOT EXISTS child (\n  id        INTEGER PRIMARY KEY,\n  parent_id INTEGER REFERENCES parent(id) ON DELETE CASCADE\n);\nINSERT INTO parent VALUES (1,'Alpha');\nINSERT INTO child VALUES (1,1),(2,1);\nSELECT 'parent' AS tbl, COUNT(*) FROM parent\nUNION ALL\nSELECT 'child', COUNT(*) FROM child;"},
+                    {"title": "DEFAULT values", "sql": "CREATE TABLE IF NOT EXISTS tasks (\n  id         INTEGER PRIMARY KEY AUTOINCREMENT,\n  title      TEXT NOT NULL,\n  status     TEXT DEFAULT 'todo',\n  created_at TEXT DEFAULT (DATE('now'))\n);\nINSERT INTO tasks (title) VALUES ('Write SQL course');\nSELECT * FROM tasks;"},
+                ],
+                "challenge": {
+                    "question": "Create a table <code>reviews</code> with: id (PK AUTOINCREMENT), product_id (INTEGER NOT NULL), rating (INTEGER CHECK 1-5), comment (TEXT), created_at TEXT DEFAULT today. Then insert one row.",
+                    "hint": "CHECK(rating BETWEEN 1 AND 5), DEFAULT (DATE('now'))",
+                    "answer": "CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL, rating INTEGER CHECK(rating BETWEEN 1 AND 5), comment TEXT, created_at TEXT DEFAULT (DATE('now')));\nINSERT INTO reviews (product_id, rating, comment) VALUES (1, 5, 'Great!');\nSELECT * FROM reviews;"
+                }
+            },
+            {
+                "slug": "sequences-autoincrement",
+                "title": "Sequences & Auto-Increment",
+                "theory": """
+<h2>Sequences & Auto-Increment</h2>
+<h3>SQLite — AUTOINCREMENT</h3>
+<pre><code>id INTEGER PRIMARY KEY AUTOINCREMENT</code></pre>
+<ul>
+  <li><code>INTEGER PRIMARY KEY</code> — auto-assigns next rowid (reuses deleted IDs)</li>
+  <li><code>AUTOINCREMENT</code> — strictly increasing, never reuses IDs</li>
+</ul>
+<h3>Oracle — SEQUENCE</h3>
+<pre><code>CREATE SEQUENCE emp_seq START WITH 1 INCREMENT BY 1;
+INSERT INTO employees (id, name)
+VALUES (emp_seq.NEXTVAL, 'Alice');</code></pre>
+<h3>PostgreSQL — SERIAL / GENERATED</h3>
+<pre><code>id SERIAL PRIMARY KEY
+-- or modern syntax:
+id INTEGER GENERATED ALWAYS AS IDENTITY</code></pre>
+<h3>MySQL — AUTO_INCREMENT</h3>
+<pre><code>id INT AUTO_INCREMENT PRIMARY KEY</code></pre>
+<h3>SQL Server — IDENTITY</h3>
+<pre><code>id INT IDENTITY(1,1) PRIMARY KEY</code></pre>
+""",
+                "examples": [
+                    {"title": "AUTOINCREMENT in action", "sql": "CREATE TABLE IF NOT EXISTS log (\n  id        INTEGER PRIMARY KEY AUTOINCREMENT,\n  message   TEXT,\n  logged_at TEXT DEFAULT (DATETIME('now'))\n);\nINSERT INTO log(message) VALUES('First entry');\nINSERT INTO log(message) VALUES('Second entry');\nINSERT INTO log(message) VALUES('Third entry');\nSELECT * FROM log;"},
+                    {"title": "Check last inserted ID", "sql": "INSERT INTO log(message) VALUES('New entry');\nSELECT last_insert_rowid() AS last_id;"},
+                    {"title": "Sequence simulation with max(id)", "sql": "-- Simulate sequence: next ID\nSELECT MAX(id) + 1 AS next_id FROM employees;"},
+                    {"title": "Gap after delete with AUTOINCREMENT", "sql": "CREATE TABLE IF NOT EXISTS seq_test (\n  id INTEGER PRIMARY KEY AUTOINCREMENT, val TEXT\n);\nINSERT INTO seq_test(val) VALUES('a'),('b'),('c');\nDELETE FROM seq_test WHERE val='b';\nINSERT INTO seq_test(val) VALUES('d');\nSELECT * FROM seq_test; -- id 2 is skipped"},
+                ],
+                "challenge": {
+                    "question": "Create a table <code>notifications</code> with AUTOINCREMENT id, message TEXT, and created_at defaulting to now. Insert 3 rows without specifying id. Then select all.",
+                    "hint": "INTEGER PRIMARY KEY AUTOINCREMENT, DEFAULT (DATETIME('now'))",
+                    "answer": "CREATE TABLE IF NOT EXISTS notifications(id INTEGER PRIMARY KEY AUTOINCREMENT, message TEXT, created_at TEXT DEFAULT (DATETIME('now')));\nINSERT INTO notifications(message) VALUES('Alert 1'),('Alert 2'),('Alert 3');\nSELECT * FROM notifications;"
+                }
+            },
+        ]
+    },
+    {
+        "id": "database-objects",
+        "title": "Database Objects",
+        "icon": "🏛️",
+        "lessons": [
+            {
+                "slug": "triggers",
+                "title": "Triggers",
+                "theory": """
+<h2>Triggers</h2>
+<p>A <strong>trigger</strong> is a stored procedure that runs automatically when a specific event (INSERT, UPDATE, DELETE) happens on a table.</p>
+<h3>Syntax</h3>
+<pre><code>CREATE TRIGGER trigger_name
+AFTER INSERT ON table_name
+FOR EACH ROW
+BEGIN
+  -- SQL statements
+END;</code></pre>
+<h3>Trigger events</h3>
+<ul>
+  <li><strong>BEFORE INSERT / UPDATE / DELETE</strong> — runs before the operation</li>
+  <li><strong>AFTER INSERT / UPDATE / DELETE</strong> — runs after the operation</li>
+  <li><strong>INSTEAD OF</strong> — replaces the operation (for views)</li>
+</ul>
+<h3>NEW and OLD</h3>
+<ul>
+  <li><code>NEW.column</code> — the new value being inserted/updated</li>
+  <li><code>OLD.column</code> — the previous value before update/delete</li>
+</ul>
+<h3>Common uses</h3>
+<ul>
+  <li>Audit logs (record every change)</li>
+  <li>Auto-update timestamps</li>
+  <li>Enforce complex business rules</li>
+  <li>Cascade actions manually</li>
+</ul>
+""",
+                "examples": [
+                    {"title": "Audit log trigger", "sql": "CREATE TABLE IF NOT EXISTS salary_log (\n  id         INTEGER PRIMARY KEY AUTOINCREMENT,\n  emp_id     INTEGER,\n  old_salary REAL,\n  new_salary REAL,\n  changed_at TEXT DEFAULT (DATETIME('now'))\n);\n\nCREATE TRIGGER IF NOT EXISTS log_salary_change\nAFTER UPDATE ON employees\nWHEN OLD.salary != NEW.salary\nBEGIN\n  INSERT INTO salary_log(emp_id, old_salary, new_salary)\n  VALUES(OLD.id, OLD.salary, NEW.salary);\nEND;\n\n-- Trigger it:\nUPDATE employees SET salary = 99000 WHERE name='Alice';\nSELECT * FROM salary_log;"},
+                    {"title": "BEFORE INSERT validation", "sql": "CREATE TABLE IF NOT EXISTS stock_movements (\n  id       INTEGER PRIMARY KEY AUTOINCREMENT,\n  product  TEXT,\n  quantity INTEGER CHECK(quantity > 0)\n);\n\nCREATE TRIGGER IF NOT EXISTS check_positive_qty\nBEFORE INSERT ON stock_movements\nWHEN NEW.quantity <= 0\nBEGIN\n  SELECT RAISE(ABORT, 'Quantity must be positive');\nEND;\n\n-- Valid insert:\nINSERT INTO stock_movements(product, quantity) VALUES('Laptop', 5);\nSELECT * FROM stock_movements;"},
+                    {"title": "List all triggers", "sql": "SELECT name, tbl_name, sql\nFROM sqlite_master\nWHERE type = 'trigger';"},
+                    {"title": "Drop a trigger", "sql": "DROP TRIGGER IF EXISTS log_salary_change;\nDROP TRIGGER IF EXISTS check_positive_qty;\nSELECT 'Triggers dropped' AS result;"},
+                ],
+                "challenge": {
+                    "question": "Create a table <code>change_log</code> (id AUTOINCREMENT, action TEXT, changed_at TEXT). Create a trigger that inserts a row into change_log with action='student_added' AFTER every INSERT on students. Then insert a student to test it.",
+                    "hint": "CREATE TRIGGER ... AFTER INSERT ON students BEGIN INSERT INTO change_log...",
+                    "answer": "CREATE TABLE IF NOT EXISTS change_log(id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, changed_at TEXT DEFAULT(DATETIME('now')));\nCREATE TRIGGER IF NOT EXISTS trg_student_add AFTER INSERT ON students BEGIN INSERT INTO change_log(action) VALUES('student_added'); END;\nINSERT INTO students(name,grade,score) VALUES('Trigger Test','A',90);\nSELECT * FROM change_log;"
+                }
+            },
+            {
+                "slug": "stored-procedures",
+                "title": "Stored Procedures & Functions",
+                "theory": """
+<h2>Stored Procedures & Functions</h2>
+<p>Stored procedures and functions are <strong>named, reusable blocks of SQL</strong> saved in the database.</p>
+<h3>Stored Procedure (Oracle/SQL Server/MySQL)</h3>
+<pre><code>-- Oracle syntax:
+CREATE OR REPLACE PROCEDURE give_raise(
+  p_dept_id IN INTEGER,
+  p_percent IN NUMBER
+) AS
+BEGIN
+  UPDATE employees
+  SET salary = salary * (1 + p_percent/100)
+  WHERE dept_id = p_dept_id;
+  COMMIT;
+END;</code></pre>
+<h3>Stored Function (Oracle)</h3>
+<pre><code>CREATE OR REPLACE FUNCTION get_annual_salary(p_id INTEGER)
+RETURN NUMBER AS
+  v_salary NUMBER;
+BEGIN
+  SELECT salary * 12 INTO v_salary FROM employees WHERE id = p_id;
+  RETURN v_salary;
+END;</code></pre>
+<h3>SQLite limitation</h3>
+<p>SQLite does not support stored procedures in SQL. The logic lives in the application code (Python, Java, etc.).</p>
+<h3>PostgreSQL (PL/pgSQL)</h3>
+<pre><code>CREATE OR REPLACE FUNCTION get_salary(p_id INT)
+RETURNS NUMERIC AS $$
+  SELECT salary FROM employees WHERE id = p_id;
+$$ LANGUAGE SQL;</code></pre>
+""",
+                "examples": [
+                    {"title": "Procedure logic as a query (SQLite)", "sql": "-- Simulating a 'give_raise' procedure:\n-- Give 10% raise to dept 1\nUPDATE employees\nSET salary = ROUND(salary * 1.10, 2)\nWHERE dept_id = 1;\nSELECT name, salary FROM employees WHERE dept_id = 1;"},
+                    {"title": "Function logic as a query", "sql": "-- Simulate get_annual_salary(id=1):\nSELECT name,\n       salary AS monthly,\n       salary * 12 AS annual\nFROM employees\nWHERE id = 1;"},
+                    {"title": "Reusable CTE as procedure substitute", "sql": "-- CTEs can substitute simple procedures in SQLite\nWITH raise_preview AS (\n  SELECT name, salary,\n         ROUND(salary * 1.15, 2) AS new_salary\n  FROM employees\n  WHERE dept_id = 1\n)\nSELECT *, new_salary - salary AS raise_amount\nFROM raise_preview;"},
+                    {"title": "View as function substitute", "sql": "CREATE VIEW IF NOT EXISTS v_annual_salaries AS\nSELECT name, salary, salary * 12 AS annual_salary,\n       ROUND(salary * 12 / 52, 2) AS weekly_salary\nFROM employees;\nSELECT * FROM v_annual_salaries;"},
+                ],
+                "challenge": {
+                    "question": "Simulate a stored procedure: give a 20% raise to all employees in department 3. Then show the updated salaries for dept 3.",
+                    "hint": "UPDATE employees SET salary = salary * 1.20 WHERE dept_id = 3",
+                    "answer": "UPDATE employees SET salary = ROUND(salary * 1.20, 2) WHERE dept_id = 3;\nSELECT name, salary FROM employees WHERE dept_id = 3;"
+                }
+            },
+            {
+                "slug": "cursors",
+                "title": "Cursors",
+                "theory": """
+<h2>Cursors</h2>
+<p>A <strong>cursor</strong> is a database object used to <strong>retrieve and process rows one at a time</strong> from a result set — like a pointer that moves through rows.</p>
+<h3>When to use cursors</h3>
+<ul>
+  <li>Row-by-row processing in stored procedures</li>
+  <li>Complex logic that can't be done in a single SQL statement</li>
+  <li>Iterating over results to call other procedures</li>
+</ul>
+<h3>⚠️ Cursor performance</h3>
+<p>Cursors are usually <strong>slower</strong> than set-based SQL. Always try to solve a problem with a single SQL query first.</p>
+<h3>Oracle/SQL Server cursor syntax</h3>
+<pre><code>DECLARE emp_cursor CURSOR FOR
+  SELECT name, salary FROM employees;
+
+OPEN emp_cursor;
+
+FETCH NEXT FROM emp_cursor INTO @name, @salary;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+  PRINT @name + ' earns ' + CAST(@salary AS VARCHAR)
+  FETCH NEXT FROM emp_cursor INTO @name, @salary
+END;
+
+CLOSE emp_cursor;
+DEALLOCATE emp_cursor;</code></pre>
+<h3>SQLite equivalent</h3>
+<p>SQLite processes rows through the application layer (Python, etc.) — there's no explicit cursor syntax in SQL itself.</p>
+""",
+                "examples": [
+                    {"title": "Row-by-row logic with recursive CTE", "sql": "-- Simulate cursor: process employees one by one\nWITH RECURSIVE\n  emp_list AS (\n    SELECT id, name, salary,\n           ROW_NUMBER() OVER (ORDER BY id) AS rn\n    FROM employees\n  ),\n  processor AS (\n    SELECT id, name, salary, rn,\n           PRINTF('Processing: %s (salary $%.0f)', name, salary) AS action\n    FROM emp_list\n    WHERE rn = 1\n    UNION ALL\n    SELECT e.id, e.name, e.salary, e.rn,\n           PRINTF('Processing: %s (salary $%.0f)', e.name, e.salary)\n    FROM emp_list e\n    JOIN processor p ON e.rn = p.rn + 1\n  )\nSELECT action FROM processor;"},
+                    {"title": "Running calculation (cursor-like)", "sql": "-- Running salary total (what a cursor would compute row by row)\nSELECT name, salary,\n       SUM(salary) OVER (ORDER BY id) AS running_total,\n       COUNT(*) OVER (ORDER BY id) AS row_num\nFROM employees;"},
+                    {"title": "Cursor vs Set-based comparison", "sql": "-- Cursor approach: process each dept one by one\n-- Set-based approach (always prefer this):\nSELECT dept_id,\n       COUNT(*) AS headcount,\n       ROUND(AVG(salary), 0) AS avg_salary,\n       SUM(salary) AS total_cost\nFROM employees\nGROUP BY dept_id;"},
+                ],
+                "challenge": {
+                    "question": "Using a window function (the set-based alternative to a cursor), show each employee with their salary and a running count of employees processed so far (ordered by id).",
+                    "hint": "COUNT(*) OVER (ORDER BY id)",
+                    "answer": "SELECT name, salary, COUNT(*) OVER (ORDER BY id) AS running_count FROM employees ORDER BY id;"
+                }
+            },
+            {
+                "slug": "synonyms-aliases",
+                "title": "Synonyms & Schema Objects",
+                "theory": """
+<h2>Synonyms & Schema Objects</h2>
+<h3>Synonyms (Oracle)</h3>
+<p>A <strong>synonym</strong> is an alias for another database object (table, view, sequence). It lets you refer to an object by a different name.</p>
+<pre><code>-- Oracle: Create a synonym
+CREATE SYNONYM emp FOR hr.employees;
+-- Now you can query: SELECT * FROM emp;
+
+-- Public synonym (accessible to all users)
+CREATE PUBLIC SYNONYM emp FOR hr.employees;
+
+-- Drop synonym
+DROP SYNONYM emp;</code></pre>
+<h3>Why use synonyms?</h3>
+<ul>
+  <li>Hide the schema name (<code>hr.employees</code> → just <code>employees</code>)</li>
+  <li>Simplify long object names</li>
+  <li>Database independence — swap the underlying table without changing queries</li>
+</ul>
+<h3>SQLite equivalent</h3>
+<p>SQLite doesn't have synonyms. Views serve a similar purpose:</p>
+<pre><code>CREATE VIEW emp AS SELECT * FROM employees;</code></pre>
+<h3>Schema objects overview</h3>
+<table class="ops-table">
+  <tr><th>Object</th><th>Purpose</th></tr>
+  <tr><td>TABLE</td><td>Stores data</td></tr>
+  <tr><td>VIEW</td><td>Saved query (virtual table)</td></tr>
+  <tr><td>INDEX</td><td>Speeds up lookups</td></tr>
+  <tr><td>SEQUENCE</td><td>Generates unique numbers</td></tr>
+  <tr><td>SYNONYM</td><td>Alias for another object</td></tr>
+  <tr><td>TRIGGER</td><td>Auto-runs on events</td></tr>
+  <tr><td>PROCEDURE</td><td>Reusable SQL block</td></tr>
+  <tr><td>FUNCTION</td><td>Returns a value</td></tr>
+</table>
+""",
+                "examples": [
+                    {"title": "View as synonym substitute", "sql": "-- Simulate synonym: short name for employees\nCREATE VIEW IF NOT EXISTS emp AS\nSELECT * FROM employees;\n\nSELECT name, salary FROM emp WHERE dept_id = 1;"},
+                    {"title": "List all database objects", "sql": "SELECT type, name\nFROM sqlite_master\nWHERE type IN ('table','view','index','trigger')\nORDER BY type, name;"},
+                    {"title": "Schema info for a table", "sql": "SELECT name, type, dflt_value, pk\nFROM pragma_table_info('employees');"},
+                    {"title": "Drop view (synonym)", "sql": "DROP VIEW IF EXISTS emp;\nSELECT 'Synonym view dropped' AS result;"},
+                ],
+                "challenge": {
+                    "question": "Create a view called <code>high_value_products</code> that acts as a synonym — it shows all products with price > 100. Then query it.",
+                    "hint": "CREATE VIEW IF NOT EXISTS high_value_products AS SELECT ...",
+                    "answer": "CREATE VIEW IF NOT EXISTS high_value_products AS SELECT * FROM products WHERE price > 100;\nSELECT * FROM high_value_products;"
+                }
+            },
+        ]
+    },
+    {
+        "id": "normalization",
+        "title": "Normalization & Design",
+        "icon": "📐",
+        "lessons": [
+            {
+                "slug": "normalization",
+                "title": "Normalization (1NF–3NF–BCNF)",
+                "theory": """
+<h2>Database Normalization</h2>
+<p>Normalization is the process of organizing a database to <strong>reduce redundancy and improve data integrity</strong>.</p>
+<h3>1NF — First Normal Form</h3>
+<p>Rules:</p>
+<ul>
+  <li>Each column contains atomic (indivisible) values</li>
+  <li>Each row is unique</li>
+  <li>No repeating groups or arrays</li>
+</ul>
+<pre><code>❌ NOT 1NF:
+| name  | phones              |
+|-------|---------------------|
+| Alice | 555-1001, 555-1002  |  ← multiple values
+
+✅ 1NF:
+| name  | phone    |
+|-------|----------|
+| Alice | 555-1001 |
+| Alice | 555-1002 |</code></pre>
+<h3>2NF — Second Normal Form</h3>
+<p>Must be 1NF + every non-key column depends on the <strong>entire primary key</strong> (no partial dependency).</p>
+<pre><code>❌ NOT 2NF (composite key: order_id + product_id):
+| order_id | product_id | product_name | qty |
+   ^ partial dependency: product_name depends only on product_id
+
+✅ 2NF: split into orders and products tables</code></pre>
+<h3>3NF — Third Normal Form</h3>
+<p>Must be 2NF + no transitive dependencies (non-key column depending on another non-key column).</p>
+<pre><code>❌ NOT 3NF:
+| emp_id | dept_id | dept_name |
+   dept_name depends on dept_id, not emp_id
+
+✅ 3NF: split departments into separate table</code></pre>
+<h3>BCNF — Boyce-Codd Normal Form</h3>
+<p>Stricter version of 3NF — every determinant must be a candidate key.</p>
+""",
+                "examples": [
+                    {"title": "Unnormalized → 1NF", "sql": "-- Unnormalized: student with multiple courses in one row\n-- CREATE TABLE bad (id INT, name TEXT, courses TEXT);\n-- ('Alice', 'Math, Science, English')\n\n-- 1NF version (separate rows):\nSELECT s.name, c.title\nFROM students s\nJOIN courses c ON s.id = c.student_id\nORDER BY s.name;"},
+                    {"title": "Check for 2NF — no partial deps", "sql": "-- Our tables are 2NF:\n-- employees: all columns depend on id (PK)\n-- order_items: qty and unit_price depend on (order_id, product_id)\nSELECT 'employees' AS tbl,\n       'id is PK, all cols depend on it' AS note\nUNION ALL\nSELECT 'order_items',\n       'composite key: order_id + product_id';"},
+                    {"title": "Check for 3NF — no transitive deps", "sql": "-- employees has dept_id (FK), not dept_name\n-- dept_name is in departments table\n-- This IS 3NF\nSELECT e.name AS employee,\n       e.dept_id,\n       d.name AS dept_name  -- from separate table\nFROM employees e\nJOIN departments d ON e.dept_id = d.id;"},
+                    {"title": "Normalised schema overview", "sql": "SELECT type, name,\n       CASE type\n         WHEN 'table' THEN 'stores data'\n         WHEN 'view'  THEN 'virtual table'\n         WHEN 'index' THEN 'speeds lookups'\n       END AS purpose\nFROM sqlite_master\nWHERE type IN ('table','view','index')\nORDER BY type, name;"},
+                ],
+                "challenge": {
+                    "question": "Our database separates employees and departments (3NF). Write a query proving dept_name is NOT stored in employees — show employees with their dept_name from the departments table.",
+                    "hint": "JOIN employees with departments",
+                    "answer": "SELECT e.name, e.dept_id, d.name AS dept_name FROM employees e JOIN departments d ON e.dept_id = d.id ORDER BY d.name;"
+                }
+            },
+            {
+                "slug": "query-optimization",
+                "title": "Query Optimization & EXPLAIN",
+                "theory": """
+<h2>Query Optimization</h2>
+<p>Query optimization is about writing SQL that runs fast — especially important on large datasets.</p>
+<h3>EXPLAIN QUERY PLAN</h3>
+<p>Shows how SQLite executes your query — which indexes it uses, whether it does a full table scan, etc.</p>
+<pre><code>EXPLAIN QUERY PLAN SELECT * FROM employees WHERE salary > 80000;</code></pre>
+<h3>Optimization tips</h3>
+<table class="ops-table">
+  <tr><th>Bad practice</th><th>Better practice</th></tr>
+  <tr><td>SELECT *</td><td>SELECT only needed columns</td></tr>
+  <tr><td>No index on WHERE columns</td><td>CREATE INDEX on frequently filtered columns</td></tr>
+  <tr><td>Function on indexed column</td><td>Avoid wrapping indexed cols in functions</td></tr>
+  <tr><td>OR in WHERE</td><td>Consider UNION instead</td></tr>
+  <tr><td>Subquery in SELECT (for each row)</td><td>Use JOIN instead</td></tr>
+  <tr><td>LIKE '%word%'</td><td>LIKE 'word%' (prefix match uses index)</td></tr>
+</table>
+<h3>Sargable predicates</h3>
+<p>A WHERE clause is "SARGable" (Search ARGument ABLE) if it can use an index:</p>
+<pre><code>✅ Sargable:   WHERE salary > 80000
+✅ Sargable:   WHERE name = 'Alice'
+❌ NOT:        WHERE UPPER(name) = 'ALICE'  -- wraps column in function</code></pre>
+""",
+                "examples": [
+                    {"title": "EXPLAIN QUERY PLAN", "sql": "EXPLAIN QUERY PLAN\nSELECT * FROM employees WHERE salary > 80000;"},
+                    {"title": "Compare with index", "sql": "CREATE INDEX IF NOT EXISTS idx_sal ON employees(salary);\n\nEXPLAIN QUERY PLAN\nSELECT * FROM employees WHERE salary > 80000;"},
+                    {"title": "SELECT * vs specific columns", "sql": "-- Bad: fetches all columns\n-- SELECT * FROM employees WHERE dept_id = 1;\n\n-- Better: only what you need\nSELECT name, salary FROM employees WHERE dept_id = 1;"},
+                    {"title": "Avoid function on WHERE column", "sql": "-- Bad (can't use index on name):\n-- SELECT * FROM employees WHERE UPPER(name) = 'ALICE';\n\n-- Better:\nSELECT * FROM employees WHERE name = 'Alice';"},
+                    {"title": "UNION vs OR", "sql": "-- OR can be slow:\n-- SELECT * FROM employees WHERE dept_id=1 OR salary>100000;\n\n-- UNION alternative (each part can use its own index):\nSELECT * FROM employees WHERE dept_id = 1\nUNION\nSELECT * FROM employees WHERE salary > 100000;"},
+                    {"title": "Check query stats", "sql": "SELECT\n  (SELECT COUNT(*) FROM employees) AS emp_rows,\n  (SELECT COUNT(*) FROM products)  AS prod_rows,\n  (SELECT COUNT(*) FROM orders)    AS order_rows;"},
+                ],
+                "challenge": {
+                    "question": "Run EXPLAIN QUERY PLAN on a query that selects employees with salary > 90000. Then create an index on salary and run EXPLAIN again to see the difference.",
+                    "hint": "EXPLAIN QUERY PLAN SELECT...; then CREATE INDEX...; then EXPLAIN again",
+                    "answer": "EXPLAIN QUERY PLAN SELECT name, salary FROM employees WHERE salary > 90000;\nCREATE INDEX IF NOT EXISTS idx_opt_sal ON employees(salary);\nEXPLAIN QUERY PLAN SELECT name, salary FROM employees WHERE salary > 90000;"
+                }
+            },
+        ]
+    },
+]
+
 # ── Flatten lessons for navigation ───────────────────────────────────────────
 ALL_LESSONS = []
 for section in CURRICULUM:
