@@ -725,7 +725,17 @@ code, pre {
   font-size: 0.85rem;
   border-top: 1px solid var(--border);
   margin-top: auto;
+  line-height: 2;
 }
+
+.footer-credit strong { color: var(--accent2); }
+
+.hero-author {
+  margin-top: 18px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.hero-author strong { color: var(--accent2); }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 860px) {

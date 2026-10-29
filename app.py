@@ -7,7 +7,7 @@ app = Flask(__name__)
 app.secret_key = "sql_course_secret_2024"
 
 # ── Sandbox DB (per-user in memory via file per session) ──────────────────────
-SANDBOX_DIR = os.path.join(os.path.dirname(__file__), "sandboxes")
+SANDBOX_DIR = os.environ.get("SANDBOX_DIR", os.path.join(os.path.dirname(__file__), "sandboxes"))
 os.makedirs(SANDBOX_DIR, exist_ok=True)
 
 SEED_SQL = """
